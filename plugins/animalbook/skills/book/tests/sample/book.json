@@ -1,0 +1,25 @@
+{
+  "title": "The Sample Book",
+  "subtitle": "Everything a reader needs to follow the project",
+  "author": "A. Author",
+  "imprint": "SAMPLE NOTES",
+  "serif": "EB Garamond",
+  "sans": "IBM Plex Sans Condensed",
+  "callouts": "tinted",
+  "cover": {
+    "layout": "classic",
+    "color": "#5b3a7a",
+    "tagline": "Notes from one project",
+    "ribbon": "Working draft",
+    "image": "cover/animal.png",
+    "image_credit": ""
+  },
+  "history": "none",
+  "parts": [
+    {
+      "title": "Foundations",
+      "status": "written"
+    }
+  ],
+  "last_build": null
+}

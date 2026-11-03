@@ -54,6 +54,15 @@ def _tex_escape(text: str) -> str:
     return "".join(replacements.get(char, char) for char in text)
 
 
+FOUR_STYLES = ("regular", "italic", "bold", "bolditalic")
+
+
+def _font_command(command: str, family: str, styles: tuple[str, ...]) -> str:
+    """Return a `\\<command>{file}{file}...` line naming a family's font files in order."""
+    files = book_settings.FONT_FILES[family]
+    return f"\\{command}" + "".join("{" + files[style] + "}" for style in styles) + "\n"
+
+
 def write_options(settings: BookSettings, book_dir: Path) -> Path:
     """Write `book_dir/style/options.tex` from the settings.
 
@@ -76,6 +85,9 @@ def write_options(settings: BookSettings, book_dir: Path) -> Path:
         f"mono={{{book_settings.MONO}}},callouts={settings.callouts},"
         "fontdir=style/fonts/,icondir=style/icons/}\n"
         f"\\animalbookmeta{meta}\n"
+        + _font_command("animalbookserif", settings.serif, FOUR_STYLES)
+        + _font_command("animalbooksans", settings.sans, FOUR_STYLES + ("semibold",))
+        + _font_command("animalbookmono", book_settings.MONO, FOUR_STYLES)
     )
     out = style_dir / "options.tex"
     out.write_text(text)

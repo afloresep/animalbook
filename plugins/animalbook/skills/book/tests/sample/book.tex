@@ -1,0 +1,91 @@
+% Sample book for the style tests. It exercises every part of the style once:
+% front matter, a part page, a chapter opener with a long title, running heads
+% with a long section title, a figure, a table, a code example, the callouts,
+% an index entry and the colophon.
+\documentclass[10pt,twoside,openright]{book}
+\usepackage{style/animalbook}
+\input{style/options.tex}
+
+\newcommand{\filler}{A probe asks whether a property can be read from the model's
+internal state; steering asks whether pushing the state along a direction changes
+what the model does. The first is about information, the second about cause, and
+most confusions come from mixing the two. A difference of means is the simplest
+probe: average the positives, average the negatives and take the difference.\par}
+
+\begin{document}
+\frontmatter
+\halftitlepage
+\copyrightpage{3 November 2026}{Built by the test suite of the book skill. Private:
+not for circulation.}
+\tableofcontents
+
+\mainmatter
+\part{Foundations}
+
+\chapter{Probes and Steering}
+\label{ch:probes}
+
+\filler\filler
+
+\section{What a Probe Is}
+
+Take one activation vector $x \in \mathbb{R}^{d}$ per example. A \textbf{linear
+probe}\index{probe} is a weight vector $w$ and a bias $b$; its score is
+\[
+  s(x) = w^\top x + b .
+\]
+\filler\filler\filler
+
+\section{A Section Title That Is Long Enough to Run Past the Width of the Running Head}
+
+\filler\filler
+
+\begin{figure}[htbp]
+  \centering
+  \rule{0.6\linewidth}{0.25\linewidth}
+  \caption{A placeholder figure with a caption long enough to wrap onto a second line
+  of text under it}
+  \label{fig:placeholder}
+\end{figure}
+
+\begin{table}[htbp]
+  \caption{Probe families used in this book}
+  \centering
+  \begin{tabular}{lll}
+    \toprule
+    Probe & Training & Used in \\
+    \midrule
+    DoM & none & Chapter~\ref{ch:probes} \\
+    Logistic & L2, 5-fold & Chapter~\ref{ch:long} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{codeexample}{A DoM direction and its AUROC}
+from sample_project.dom import auroc
+
+direction = pos.mean(0) - neg.mean(0)
+score = auroc(pos @ direction, neg @ direction)
+\end{codeexample}
+
+\filler\filler\filler\filler
+
+\chapter{A Chapter Title That Is Long Enough to Need Two Lines on Its Opener}
+\label{ch:long}
+
+\filler\filler\filler
+
+\subsection{A Subsection}
+
+\filler\filler\filler\filler\filler
+
+\backmatter
+\printindex
+
+\begin{colophon}
+The animal on the cover of \emph{The Sample Book} is the common cuckoo
+(\emph{Cuculus canorus}), a bird that lays its eggs in other birds' nests and
+leaves the hosts to raise its young.
+\end{colophon}
+
+\end{document}

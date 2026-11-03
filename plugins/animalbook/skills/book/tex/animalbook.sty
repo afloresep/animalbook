@@ -1,0 +1,202 @@
+% animalbook.sty -- page design for project books in the style of the classic
+% engraved-animal programming books: 7 x 9.19 in pages, serif text, condensed
+% sans headings, right-aligned chapter openers, colored callouts.
+%
+% Use with LuaLaTeX:
+%   \documentclass[10pt,twoside,openright]{book}
+%   \usepackage{style/animalbook}
+%   \input{style/options.tex}   % written by setup_book.py from book.json
+%
+% This file is copied into each book's style/ folder by setup_book.py. Edit the
+% copy in the skill, not the one in a book.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{style/animalbook}[2026/11/03 v0.1 project book style]
+
+\RequirePackage{iftex}
+\ifLuaTeX\else
+  \PackageError{animalbook}{This style needs LuaLaTeX}{Build with lualatex.}
+\fi
+
+% ---------------- page ----------------
+\RequirePackage[paperwidth=7in,paperheight=9.19in,
+  inner=0.85in,outer=0.75in,top=0.85in,bottom=0.8in,
+  headheight=14pt,headsep=0.22in,footskip=0.35in]{geometry}
+
+\RequirePackage{amsmath,amssymb}
+\RequirePackage{fontspec}
+\RequirePackage{microtype}
+\RequirePackage{xcolor,graphicx,booktabs,tabularx,longtable,array}
+\RequirePackage{titlesec,fancyhdr,caption,listings,enumitem}
+\RequirePackage[skins,breakable]{tcolorbox}
+\RequirePackage{imakeidx}
+\RequirePackage{pdfpages}
+\RequirePackage{etoolbox}
+\RequirePackage{hyperref}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt plus 1pt}
+\setlength{\emergencystretch}{3em}
+\linespread{1.08}
+\setlist{itemsep=2pt,topsep=4pt,parsep=0pt}
+\makeindex[intoc]
+
+% ---------------- colors ----------------
+\definecolor{abink}{HTML}{172431}
+\definecolor{abkey}{HTML}{6745A5}
+\definecolor{abcare}{HTML}{B26B00}
+\definecolor{abwork}{HTML}{1F7A70}
+\definecolor{abproj}{HTML}{4D5968}
+\definecolor{absidebar}{HTML}{ECECEC}
+\hypersetup{colorlinks=true,linkcolor=abink,citecolor=abink,urlcolor=abkey}
+
+% ---------------- settings ----------------
+% \animalbooksetup{serif=...,sans=...,mono=...,callouts=tinted|icon|strip,
+%                  fontdir=style/fonts/,icondir=style/icons/}
+\ExplSyntaxOn
+\keys_define:nn { animalbook }
+  {
+    serif    .tl_set:N = \l_animalbook_serif_tl ,
+    sans     .tl_set:N = \l_animalbook_sans_tl ,
+    mono     .tl_set:N = \l_animalbook_mono_tl ,
+    callouts .choices:nn = { tinted , icon , strip }
+      { \tl_gset_eq:NN \g_animalbook_callouts_tl \l_keys_choice_tl } ,
+    fontdir  .tl_gset:N = \g_animalbook_fontdir_tl ,
+    icondir  .tl_gset:N = \g_animalbook_icondir_tl ,
+  }
+\tl_gset:Nn \g_animalbook_callouts_tl { tinted }
+\tl_gset:Nn \g_animalbook_fontdir_tl { style/fonts/ }
+\tl_gset:Nn \g_animalbook_icondir_tl { style/icons/ }
+\NewDocumentCommand \animalbooksetup { m } { \keys_set:nn { animalbook } {#1} }
+\cs_new:cpn { animalbook@fontdir } { \g_animalbook_fontdir_tl }
+\cs_new:cpn { animalbook@icondir } { \g_animalbook_icondir_tl }
+\cs_new:cpn { animalbook@callouts } { \g_animalbook_callouts_tl }
+\ExplSyntaxOff
+
+% \animalbookmeta{title}{subtitle}{author}{imprint}
+\newcommand{\animalbook@title}{}
+\newcommand{\animalbook@subtitle}{}
+\newcommand{\animalbook@author}{}
+\newcommand{\animalbook@imprint}{}
+\newcommand{\animalbookmeta}[4]{%
+  \renewcommand{\animalbook@title}{#1}%
+  \renewcommand{\animalbook@subtitle}{#2}%
+  \renewcommand{\animalbook@author}{#3}%
+  \renewcommand{\animalbook@imprint}{#4}%
+  \hypersetup{pdftitle={#1},pdfauthor={#3}}}
+
+% ---------------- fonts ----------------
+% The font file names come from options.tex, so the skill's font table stays the
+% only place that knows them.
+% \animalbookserif{regular}{italic}{bold}{bolditalic}
+\newcommand{\animalbookserif}[4]{%
+  \setmainfont{#1}[Path=\animalbook@fontdir,ItalicFont=#2,BoldFont=#3,
+    BoldItalicFont=#4,Ligatures=TeX,Numbers=OldStyle,Scale=\animalbook@serifscale]}
+% Garamond-style faces have a small x-height; scale them so 10pt text reads
+% like the books it imitates (about 75 characters a line).
+\newcommand{\animalbook@serifscale}{1.12}
+% \animalbooksans{regular}{italic}{bold}{bolditalic}{semibold}
+\newcommand{\animalbooksans}[5]{%
+  \setsansfont{#1}[Path=\animalbook@fontdir,ItalicFont=#2,BoldFont=#3,
+    BoldItalicFont=#4,Ligatures=TeX]%
+  \setfontfamily\animalbook@semibold{#5}[Path=\animalbook@fontdir,Ligatures=TeX]}
+% \animalbookmono{regular}{italic}{bold}{bolditalic}
+\newcommand{\animalbookmono}[4]{%
+  \setmonofont{#1}[Path=\animalbook@fontdir,ItalicFont=#2,BoldFont=#3,
+    BoldItalicFont=#4,Scale=MatchLowercase]}
+% Semibold sans for labels; plain bold sans until the options define it.
+\newcommand{\animalbook@semibold}{\sffamily\bfseries}
+\newcommand{\sbseries}{\animalbook@semibold}
+
+% ---------------- headings ----------------
+\titleformat{\chapter}[display]
+  {\sffamily\raggedleft}
+  {\sbseries\small\addfontfeature{LetterSpace=18}%
+    \MakeUppercase{\chaptertitlename\ \thechapter}}
+  {4pt}
+  {\bfseries\fontsize{26}{29}\selectfont}
+  [\vspace{4pt}{\titlerule[2pt]}]
+\titleformat{name=\chapter,numberless}[display]
+  {\sffamily\raggedleft}
+  {}
+  {0pt}
+  {\bfseries\fontsize{26}{29}\selectfont}
+  [\vspace{4pt}{\titlerule[2pt]}]
+\titlespacing*{\chapter}{0pt}{40pt}{26pt}
+
+\titleformat{\part}[display]
+  {\sffamily\centering\thispagestyle{empty}}
+  {\sbseries\large\addfontfeature{LetterSpace=18}\MakeUppercase{\partname\ \thepart}}
+  {10pt}
+  {\bfseries\fontsize{30}{34}\selectfont}
+
+\titleformat{\section}{\sffamily\bfseries\fontsize{14}{17}\selectfont}{\thesection}{0.6em}{}
+\titlespacing*{\section}{0pt}{16pt}{4pt}
+\titleformat{\subsection}{\sffamily\bfseries\fontsize{11.5}{14}\selectfont}{\thesubsection}{0.6em}{}
+\titlespacing*{\subsection}{0pt}{12pt}{3pt}
+\titleformat{\subsubsection}{\sffamily\itshape\normalsize}{}{0pt}{}
+\titlespacing*{\subsubsection}{0pt}{10pt}{2pt}
+
+% ---------------- running heads ----------------
+% The blank page before a chapter carries no head.
+\renewcommand{\cleardoublepage}{\clearpage\if@twoside\ifodd\c@page\else
+  \hbox{}\thispagestyle{empty}\newpage\fi\fi}
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\chaptermark}[1]{\markboth{#1}{}}
+\renewcommand{\sectionmark}[1]{\markright{\thesection\ #1}}
+% A long section title wraps inside the head instead of running past it.
+\newcommand{\animalbook@headtext}[2]{%
+  \parbox[b]{0.82\headwidth}{#1\strut#2\strut}}
+\fancyhead[LE]{\sffamily\small\thepage\quad|\quad
+  \animalbook@headtext{\raggedright}{\leftmark}}
+\fancyhead[RO]{\sffamily\small\animalbook@headtext{\raggedleft}{\rightmark}%
+  \quad|\quad\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancypagestyle{plain}{\fancyhf{}%
+  \fancyfoot[C]{\sffamily\small\thepage}\renewcommand{\headrulewidth}{0pt}}
+
+% ---------------- captions and numbering ----------------
+\captionsetup{font={sf,small},labelfont={bf,up},textfont=it,labelsep=period,
+  justification=raggedright,singlelinecheck=false,skip=4pt}
+\captionsetup[table]{position=top}
+% Tables are set in the sans, as in the books this style imitates. The hook is on
+% the tabular itself because a float resets the font when it starts.
+\AtBeginEnvironment{tabular}{\sffamily\small}
+\AtBeginEnvironment{tabularx}{\sffamily\small}
+\AtBeginEnvironment{longtable}{\sffamily\small}
+\renewcommand{\thefigure}{\thechapter-\arabic{figure}}
+\renewcommand{\thetable}{\thechapter-\arabic{table}}
+
+% ---------------- code ----------------
+\lstset{basicstyle=\ttfamily\small,columns=fullflexible,keepspaces=true,
+  breaklines=true,upquote=true,xleftmargin=1em,aboveskip=6pt,belowskip=6pt,
+  showstringspaces=false}
+\renewcommand{\lstlistingname}{Example}
+\AtBeginDocument{\renewcommand{\thelstlisting}{\thechapter-\arabic{lstlisting}}}
+% \begin{codeexample}{title} ... \end{codeexample}: a numbered, titled example.
+\lstnewenvironment{codeexample}[1]{\lstset{caption={#1},captionpos=t}}{}
+
+% ---------------- front matter ----------------
+% \coverpage{pdf}: the cover as the first page.
+\newcommand{\coverpage}[1]{\includepdf[pages=1,noautoscale=false]{#1}\cleardoublepage}
+\newcommand{\halftitlepage}{%
+  \begingroup\thispagestyle{empty}\null\vspace{1.6in}%
+  {\raggedleft\sffamily\bfseries\fontsize{26}{30}\selectfont\animalbook@title\par}%
+  \newpage\endgroup}
+% \copyrightpage{date}{notes}: the back of the half-title.
+\newcommand{\copyrightpage}[2]{%
+  \begingroup\thispagestyle{empty}\null\vfill
+  {\small\sffamily
+   \textbf{\animalbook@title}\par
+   \ifx\animalbook@subtitle\empty\else\animalbook@subtitle\par\fi
+   by \animalbook@author\par\medskip
+   Draft of #1.\par\medskip
+   #2\par\medskip
+   \ifx\animalbook@imprint\empty\else\animalbook@imprint\par\fi}%
+  \newpage\endgroup}
+
+% ---------------- back matter ----------------
+\newenvironment{colophon}
+  {\cleardoublepage\thispagestyle{empty}\null\vspace{0.6in}%
+   {\sffamily\bfseries\fontsize{14}{17}\selectfont Colophon\par}\medskip\small}
+  {\par}
