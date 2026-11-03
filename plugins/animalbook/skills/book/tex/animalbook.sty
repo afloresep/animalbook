@@ -230,7 +230,7 @@
   \begin{tcolorbox}[animalbook/base,blankest,lefthand width=1.1cm]
     \begin{tikzpicture}
       \node[circle,fill=#1!22!white,draw=#1,line width=1pt,minimum size=1.05cm,
-        inner sep=0pt]{\animalbook@icon{#2}{0.8cm}};
+        inner sep=0pt]{\animalbook@icon{#2}{0.7cm}};
     \end{tikzpicture}%
     \tcblower
     {\color{#1}\rule{\linewidth}{1.2pt}}\par\vspace{1pt}%
@@ -270,15 +270,18 @@
 \newcommand{\questionsfor}[2]{\animalbook@callout{abink}{questions}{Questions for #1}{#2}}
 \newcommand{\todo}[2]{\animalbook@callout{abcare}{careful}{To write (#1)}{#2}}
 
-% Sidebars: gray box, centered bold sans title.
-\newcommand{\animalbook@sidebar}[2]{%
+% Sidebars: gray box, centered bold sans title, optionally with an icon before it.
+% \animalbook@sidebar{title}{icon or empty}{body}
+\newcommand{\animalbook@sidebar}[3]{%
   \begin{tcolorbox}[enhanced,breakable,arc=0pt,frame hidden,colback=absidebar,
       left=9pt,right=9pt,top=7pt,bottom=7pt,before skip=8pt,after skip=8pt,
       fontupper=\small]
-    {\centering\sffamily\bfseries\small #1\par}\vspace{3pt}#2
+    {\centering\sffamily\bfseries\small
+     \ifx\relax#2\relax\else\raisebox{-0.35\height}{\animalbook@icon{#2}{0.75cm}}\enspace\fi
+     #1\par}\vspace{3pt}#3
   \end{tcolorbox}}
-\newcommand{\inproject}[1]{\animalbook@sidebar{In Our Project}{#1}}
-\newcommand{\sources}[1]{\animalbook@sidebar{Sources for This Chapter}{#1}}
+\newcommand{\inproject}[1]{\animalbook@sidebar{In Our Project}{project}{#1}}
+\newcommand{\sources}[1]{\animalbook@sidebar{Sources for This Chapter}{}{#1}}
 
 % ---------------- small inline helpers ----------------
 % \ev{tag}: an evidence tag such as [finding] or [negative].
