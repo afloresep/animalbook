@@ -1,0 +1,160 @@
+{
+ "batchcomplete": "",
+ "query": {
+  "pages": {
+   "36544502": {
+    "pageid": 36544502,
+    "ns": 6,
+    "title": "File:A cuckoo sitting on a branch of a tree. Etching by T. Owen. Wellcome V0020936.jpg",
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 3706853,
+      "width": 2450,
+      "height": 2972,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b9/A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg/960px-A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 900,
+      "thumbheight": 1092,
+      "responsiveUrls": {
+       "2": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b9/A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg/1920px-A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b9/A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg/960px-A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 900,
+       "height": 1092,
+       "srcset": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b9/A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg/1920px-A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/b/b9/A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/w/index.php?curid=36544502",
+      "extmetadata": {
+       "LicenseShortName": {
+        "value": "CC BY 4.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       }
+      }
+     }
+    ]
+   },
+   "33584611": {
+    "pageid": 33584611,
+    "ns": 6,
+    "title": "File:Hokusai (1828) Cuckoo and Azaleas.jpg",
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 539319,
+      "width": 750,
+      "height": 1014,
+      "thumburl": "https://upload.wikimedia.org/wikipedia/commons/9/95/Hokusai_%281828%29_Cuckoo_and_Azaleas.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "thumbwidth": 900,
+      "thumbheight": 1217,
+      "thumbattribs": {
+       "src": "https://upload.wikimedia.org/wikipedia/commons/9/95/Hokusai_%281828%29_Cuckoo_and_Azaleas.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 900,
+       "height": 1217
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/9/95/Hokusai_%281828%29_Cuckoo_and_Azaleas.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Hokusai_(1828)_Cuckoo_and_Azaleas.jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/w/index.php?curid=33584611",
+      "extmetadata": {
+       "Artist": {
+        "value": "<div class=\"fn value\">\n<a href=\"//commons.wikimedia.org/wiki/Katsushika_Hokusai\" title=\"Katsushika Hokusai\">Katsushika Hokusai</a></div>",
+        "source": "commons-desc-page"
+       },
+       "DateTimeOriginal": {
+        "value": "1828<div style=\"display: none;\">date QS:P571,+1828-00-00T00:00:00Z/9</div>",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "Public domain",
+        "source": "commons-desc-page",
+        "hidden": ""
+       }
+      }
+     }
+    ]
+   },
+   "-1": {
+    "pageid": -1,
+    "ns": 6,
+    "title": "File:Made-up no-derivatives engraving.jpg",
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 3706853,
+      "width": 2450,
+      "height": 2972,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b9/A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg/960px-A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 900,
+      "thumbheight": 1092,
+      "responsiveUrls": {
+       "2": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b9/A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg/1920px-A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b9/A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg/960px-A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 900,
+       "height": 1092,
+       "srcset": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b9/A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg/1920px-A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/b/b9/A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/w/index.php?curid=36544502",
+      "extmetadata": {
+       "LicenseShortName": {
+        "value": "CC BY-ND 4.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       }
+      }
+     }
+    ]
+   },
+   "-2": {
+    "pageid": -2,
+    "ns": 6,
+    "title": "File:Made-up fair use plate.jpg",
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 3706853,
+      "width": 2450,
+      "height": 2972,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b9/A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg/960px-A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 900,
+      "thumbheight": 1092,
+      "responsiveUrls": {
+       "2": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b9/A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg/1920px-A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b9/A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg/960px-A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 900,
+       "height": 1092,
+       "srcset": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b9/A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg/1920px-A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/b/b9/A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:A_cuckoo_sitting_on_a_branch_of_a_tree._Etching_by_T._Owen._Wellcome_V0020936.jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/w/index.php?curid=36544502",
+      "extmetadata": {
+       "LicenseShortName": {
+        "value": "Fair use",
+        "source": "commons-desc-page",
+        "hidden": ""
+       }
+      }
+     }
+    ]
+   }
+  }
+ },
+ "_note": "Real Commons API response for the first two files; the last two are made up, because Commons never hosts ND, NC or fair-use files."
+}
