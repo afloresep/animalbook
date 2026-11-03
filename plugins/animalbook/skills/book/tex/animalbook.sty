@@ -200,3 +200,98 @@
   {\cleardoublepage\thispagestyle{empty}\null\vspace{0.6in}%
    {\sffamily\bfseries\fontsize{14}{17}\selectfont Colophon\par}\medskip\small}
   {\par}
+
+% ---------------- callouts ----------------
+% Five callout kinds, drawn in the style chosen with callouts=tinted|icon|strip:
+%   \keyidea{body}  \careful{body}  \workedexample{title}{body}
+%   \questionsfor{who}{body}  \todo{priority}{body}
+% and two gray sidebars, the same in every style:
+%   \inproject{body}  \sources{body}
+% Each kind has its own engraved animal in style/icons/.
+\newcommand{\animalbook@label}[2]{%
+  {\color{#1}\sbseries\footnotesize\addfontfeature{LetterSpace=8}\MakeUppercase{#2}}}
+\newcommand{\animalbook@icon}[2]{\includegraphics[width=#2]{\animalbook@icondir#1.png}}
+
+\tcbset{animalbook/base/.style={enhanced,arc=0pt,outer arc=0pt,before skip=8pt,
+  after skip=8pt,fontupper=\small,lefthand width=0.95cm,sidebyside gap=8pt,
+  sidebyside align=top seam,sidebyside,segmentation hidden,boxsep=0pt}}
+
+% tinted: colored left bar, light tint, icon left, colored label.
+\newcommand{\animalbook@tinted}[4]{%
+  \begin{tcolorbox}[animalbook/base,colback=#1!9!white,frame hidden,
+      borderline west={4pt}{0pt}{#1},left=9pt,right=8pt,top=7pt,bottom=7pt]
+    \animalbook@icon{#2}{0.95cm}%
+    \tcblower
+    \animalbook@label{#1}{#3}\par\vspace{2pt}#4
+  \end{tcolorbox}}
+
+% icon: no box, the icon in a tinted disc, a thin colored rule over the text.
+\newcommand{\animalbook@iconstyle}[4]{%
+  \begin{tcolorbox}[animalbook/base,blankest,lefthand width=1.1cm]
+    \begin{tikzpicture}
+      \node[circle,fill=#1!22!white,draw=#1,line width=1pt,minimum size=1.05cm,
+        inner sep=0pt]{\animalbook@icon{#2}{0.8cm}};
+    \end{tikzpicture}%
+    \tcblower
+    {\color{#1}\rule{\linewidth}{1.2pt}}\par\vspace{1pt}%
+    \animalbook@label{#1}{#3}\par\vspace{1pt}#4
+  \end{tcolorbox}}
+
+% strip: solid header strip with a white label, lightly tinted body with the icon.
+\newcommand{\animalbook@strip}[4]{%
+  \begin{tcolorbox}[animalbook/base,colback=#1!6!white,colframe=#1,boxrule=0.6pt,
+      colbacktitle=#1,coltitle=white,toptitle=3pt,bottomtitle=3pt,lefttitle=8pt,
+      title={\animalbook@label{white}{#3}},left=7pt,right=7pt,top=6pt,bottom=6pt]
+    \animalbook@icon{#2}{0.85cm}%
+    \tcblower
+    #4
+  \end{tcolorbox}}
+
+\ExplSyntaxOn
+% \animalbook@callout{color}{icon}{label}{body}: draw in the chosen style.
+\cs_new:cpn { animalbook@callout } #1#2#3#4
+  {
+    \str_case:Vn \g_animalbook_callouts_tl
+      {
+        { tinted } { \use:c { animalbook@tinted } {#1} {#2} {#3} {#4} }
+        { icon }   { \use:c { animalbook@iconstyle } {#1} {#2} {#3} {#4} }
+        { strip }  { \use:c { animalbook@strip } {#1} {#2} {#3} {#4} }
+      }
+  }
+\ExplSyntaxOff
+
+\newcounter{workedexample}[chapter]
+\renewcommand{\theworkedexample}{\thechapter-\arabic{workedexample}}
+\newcommand{\keyidea}[1]{\animalbook@callout{abkey}{keyidea}{Key idea}{#1}}
+\newcommand{\careful}[1]{\animalbook@callout{abcare}{careful}{Careful}{#1}}
+\newcommand{\workedexample}[2]{\refstepcounter{workedexample}%
+  \animalbook@callout{abwork}{example}{Worked example \theworkedexample: #1}{#2}}
+\newcommand{\questionsfor}[2]{\animalbook@callout{abink}{questions}{Questions for #1}{#2}}
+\newcommand{\todo}[2]{\animalbook@callout{abcare}{careful}{To write (#1)}{#2}}
+
+% Sidebars: gray box, centered bold sans title.
+\newcommand{\animalbook@sidebar}[2]{%
+  \begin{tcolorbox}[enhanced,breakable,arc=0pt,frame hidden,colback=absidebar,
+      left=9pt,right=9pt,top=7pt,bottom=7pt,before skip=8pt,after skip=8pt,
+      fontupper=\small]
+    {\centering\sffamily\bfseries\small #1\par}\vspace{3pt}#2
+  \end{tcolorbox}}
+\newcommand{\inproject}[1]{\animalbook@sidebar{In Our Project}{#1}}
+\newcommand{\sources}[1]{\animalbook@sidebar{Sources for This Chapter}{#1}}
+
+% ---------------- small inline helpers ----------------
+% \ev{tag}: an evidence tag such as [finding] or [negative].
+\newcommand{\ev}[1]{{\sffamily\small\color{abkey}[#1]}}
+% \smallnote{text}: a small note under a table or figure.
+\newcommand{\smallnote}[1]{{\small\color{abink}#1\par}}
+% \code{text}: inline code and paths; breaks after each \_ and /.
+\newcommand{\animalbook@codeus}{\textunderscore\allowbreak}
+\ExplSyntaxOn
+\tl_new:N \l__animalbook_code_tl
+\NewDocumentCommand \code { m }
+  {
+    \tl_set:Nn \l__animalbook_code_tl {#1}
+    \tl_replace_all:Nnn \l__animalbook_code_tl { / } { / \allowbreak }
+    { \small \ttfamily \cs_set_eq:Nc \_ { animalbook@codeus } \l__animalbook_code_tl }
+  }
+\ExplSyntaxOff

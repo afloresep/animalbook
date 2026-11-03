@@ -25,7 +25,32 @@ not for circulation.}
 \chapter{Probes and Steering}
 \label{ch:probes}
 
-\filler\filler
+\sources{The probe code in \code{src/sample\_project/dom.py} and
+\code{scripts/landmark\_probe.py}; results in \code{outputs/probes/} as cited in the
+handouts. Meetings only for why we did each step.}
+
+\filler
+
+\keyidea{An SAE rewrites one activation vector as a short list of (feature, value)
+pairs.}
+
+\careful{A probe that works shows that the property is linearly readable from the
+state. It does not show that the model uses that direction.}
+
+\workedexample{nothing stands out on 10 episodes}{The largest null value is 5.82, so
+no feature passes the threshold \ev{negative}.}
+
+\inproject{We save the exact token IDs of every model call, then replay them through
+the same pinned model with a hook that saves the residual stream.}
+
+\questionsfor{the supervisor}{Is the detection question parked for good, or should the
+midterm still report a detection baseline?}
+
+\todo{P2}{Explain the logistic probe and its regularization.}
+
+\smallnote{Source: \code{outputs/run\_01/probe\_metrics.json}.}
+
+\filler
 
 \section{What a Probe Is}
 
