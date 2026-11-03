@@ -1,0 +1,11 @@
+__pycache__/
+.pytest_cache/
+.superpowers/
+*.aux
+*.log
+*.toc
+*.out
+*.idx
+*.ind
+*.ilg
+plugins/animalbook/skills/book/tests/_build/
