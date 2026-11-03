@@ -9,3 +9,6 @@ __pycache__/
 *.ind
 *.ilg
 plugins/animalbook/skills/book/tests/_build/
+# Design notes and plans stay local; they describe one private book.
+docs/specs/
+docs/plans/

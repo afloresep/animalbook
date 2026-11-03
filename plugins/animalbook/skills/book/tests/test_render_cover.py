@@ -11,7 +11,7 @@ from conftest import SAMPLE, SKILL_DIR, replace_cover
 import render_cover
 import setup_book
 
-MOCKUP_ANIMAL = SKILL_DIR.parents[3] / "docs" / "specs" / "2026-11-03-book-mockups" / "codex_clean.png"
+MOCKUP_ANIMAL = Path(__file__).parent / "fixtures" / "animal.png"
 
 LONG_TITLE = "Activation-Based Monitoring of Reward Hacking in Coding Agents"
 
