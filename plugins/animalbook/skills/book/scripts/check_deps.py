@@ -44,6 +44,9 @@ LATEX_PACKAGES: dict[str, str] = {
     "tikz": "texlive-pictures",
 }
 
+# LuaLaTeX loads fonts through luaotfload, which Debian ships apart from fontspec.
+LUAOTFLOAD_FILE = "luaotfload-main.lua"
+
 # Chrome works in place of Chromium on macOS.
 MAC_CHROME = Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
 
@@ -66,6 +69,21 @@ class Missing:
     install: str
 
 
+def has_tex_file(name: str) -> bool:
+    """Return whether kpsewhich finds a file on the TeX search path.
+
+    Args:
+        name: File name with its extension, for example "titlesec.sty".
+
+    Returns:
+        True when kpsewhich prints a path for it.
+    """
+    if shutil.which("kpsewhich") is None:
+        return False
+    result = subprocess.run(["kpsewhich", name], capture_output=True, text=True, check=False)
+    return bool(result.stdout.strip())
+
+
 def has_latex_package(name: str) -> bool:
     """Return whether kpsewhich finds `<name>.sty`.
 
@@ -75,12 +93,7 @@ def has_latex_package(name: str) -> bool:
     Returns:
         True when the package file is on the TeX search path.
     """
-    if shutil.which("kpsewhich") is None:
-        return False
-    result = subprocess.run(
-        ["kpsewhich", f"{name}.sty"], capture_output=True, text=True, check=False
-    )
-    return bool(result.stdout.strip())
+    return has_tex_file(f"{name}.sty")
 
 
 def _has_command(name: str, platform: str) -> bool:
@@ -114,6 +127,9 @@ def check(platform: str) -> list[Missing]:
         for name in COMMANDS
         if not _has_command(name, platform)
     ]
+    if not has_tex_file(LUAOTFLOAD_FILE):
+        hint = "tlmgr install luaotfload" if platform == "darwin" else "sudo apt install texlive-luatex"
+        missing.append(Missing("luaotfload", "latex", BOOK, hint))
     for name, apt_package in LATEX_PACKAGES.items():
         if has_latex_package(name):
             continue
