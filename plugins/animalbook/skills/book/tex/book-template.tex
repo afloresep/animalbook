@@ -1,0 +1,62 @@
+% A new book starts from this file. Copy it to <book_dir>/book.tex, run
+% setup_book.py and render_cover.py, then build with lualatex (three runs).
+% Replace every <<...>>; delete the parts you do not need.
+\documentclass[10pt,twoside,openright]{book}
+\usepackage{style/animalbook}
+\input{style/options.tex}
+
+\begin{document}
+
+\frontmatter
+\coverpage{cover/cover.pdf}
+\halftitlepage
+\copyrightpage{<<draft date, for example 3 November 2026>>}{<<who the book is for;
+privacy note if it quotes meetings; cover image credit>>}
+\tableofcontents
+
+\chapter{Conventions Used in This Book}
+
+\textbf{Parts.} <<one sentence per part on what it covers, and where a new reader
+should start>>
+
+\textbf{Sources.} Every chapter opens with a box saying where its content comes
+from. Numbers come only from files in the project: outputs, code, or documents
+that cite them. Meetings give context and questions, never numbers.
+
+\textbf{Callouts.}
+\keyidea{What to remember from a section.}
+\careful{Concepts that are easy to confuse, and common mistakes.}
+\workedexample{title}{A number from the project, computed step by step.}
+\inproject{Where the concept lives in the repository and the outputs.}
+\questionsfor{<<who>>}{What is still open and worth raising.}
+
+\textbf{Evidence tags.} \ev{finding} says something about the question the
+project studies; \ev{method check} shows the tools work; \ev{negative} means the
+tested effect was not shown; \ev{lead} is a pattern that still needs an
+independent test.
+
+\textbf{Priorities.} Sections not yet written are marked P1 (needed now), P2
+(useful soon) or P3 (for completeness).
+
+\mainmatter
+\part{<<Foundations>>}
+\include{chapters/01-<<first-chapter>>}
+
+\part{<<The Problem>>}
+\include{chapters/02-<<chapter>>}
+
+\appendix
+\include{chapters/<<history-or-glossary>>}
+
+\backmatter
+\printindex
+
+\begin{colophon}
+The animal on the cover of \emph{<<title>>} is <<the animal, with its Latin
+name>>. <<One or two facts about it, and why it fits this book.>>
+
+The cover image is <<artist, date, source and license, or "an engraving
+generated with Codex">>.
+\end{colophon}
+
+\end{document}

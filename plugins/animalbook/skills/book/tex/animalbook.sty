@@ -261,7 +261,8 @@
 \ExplSyntaxOff
 
 \newcounter{workedexample}[chapter]
-\renewcommand{\theworkedexample}{\thechapter-\arabic{workedexample}}
+% Front matter chapters are unnumbered, so their examples get a plain number.
+\renewcommand{\theworkedexample}{\ifnum\value{chapter}>0 \thechapter-\fi\arabic{workedexample}}
 \newcommand{\keyidea}[1]{\animalbook@callout{abkey}{keyidea}{Key idea}{#1}}
 \newcommand{\careful}[1]{\animalbook@callout{abcare}{careful}{Careful}{#1}}
 \newcommand{\workedexample}[2]{\refstepcounter{workedexample}%
