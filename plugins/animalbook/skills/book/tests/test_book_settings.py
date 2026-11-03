@@ -24,7 +24,6 @@ def test_unknown_font_is_rejected(tmp_path):
         book_settings.load(path)
 
 
-@pytest.mark.skipif(not FONTS_DIR.is_dir(), reason="fonts are added in Task 3")
 def test_every_font_file_exists():
     for styles in book_settings.FONT_FILES.values():
         for name in styles.values():

@@ -17,8 +17,49 @@ MONO = "IBM Plex Mono"
 HISTORY = ("appendix", "callouts", "both", "none")
 PART_STATUS = ("planned", "written")
 
-# family -> style -> file name in assets/fonts/. Filled when the fonts are bundled.
-FONT_FILES: dict[str, dict[str, str]] = {}
+# family -> style -> file name in assets/fonts/. Sans families add "semibold" for
+# labels. Cormorant's Regular is too light for body text, so Medium stands in.
+# Libre Caslon Display has one style only.
+FONT_FILES: dict[str, dict[str, str]] = {
+    "EB Garamond": {
+        "regular": "EBGaramond-Regular.otf",
+        "italic": "EBGaramond-Italic.otf",
+        "bold": "EBGaramond-Bold.otf",
+        "bolditalic": "EBGaramond-BoldItalic.otf",
+    },
+    "Cormorant Garamond": {
+        "regular": "CormorantGaramond-Medium.ttf",
+        "italic": "CormorantGaramond-MediumItalic.ttf",
+        "bold": "CormorantGaramond-Bold.ttf",
+        "bolditalic": "CormorantGaramond-BoldItalic.ttf",
+    },
+    "Libre Caslon Display": {
+        "regular": "LibreCaslonDisplay-Regular.ttf",
+        "italic": "LibreCaslonDisplay-Regular.ttf",
+        "bold": "LibreCaslonDisplay-Regular.ttf",
+        "bolditalic": "LibreCaslonDisplay-Regular.ttf",
+    },
+    "IBM Plex Sans Condensed": {
+        "regular": "IBMPlexSansCondensed-Regular.ttf",
+        "italic": "IBMPlexSansCondensed-Italic.ttf",
+        "semibold": "IBMPlexSansCondensed-SemiBold.ttf",
+        "bold": "IBMPlexSansCondensed-Bold.ttf",
+        "bolditalic": "IBMPlexSansCondensed-BoldItalic.ttf",
+    },
+    "Fira Sans Condensed": {
+        "regular": "FiraSansCondensed-Regular.ttf",
+        "italic": "FiraSansCondensed-Italic.ttf",
+        "semibold": "FiraSansCondensed-SemiBold.ttf",
+        "bold": "FiraSansCondensed-Bold.ttf",
+        "bolditalic": "FiraSansCondensed-BoldItalic.ttf",
+    },
+    "IBM Plex Mono": {
+        "regular": "IBMPlexMono-Regular.ttf",
+        "italic": "IBMPlexMono-Italic.ttf",
+        "bold": "IBMPlexMono-Bold.ttf",
+        "bolditalic": "IBMPlexMono-Bold.ttf",
+    },
+}
 
 
 class SettingsError(ValueError):
