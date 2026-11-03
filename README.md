@@ -83,7 +83,7 @@ The build tests need LuaLaTeX and the fonts above.
 
 ## Licenses
 
-The fonts in `plugins/animalbook/skills/book/assets/fonts/` are under the SIL Open
+The code, templates and icons are under the MIT License (`LICENSE`). The fonts in `plugins/animalbook/skills/book/assets/fonts/` are under the SIL Open
 Font License; each family's license file sits next to it. The callout icons
 were generated with Codex for this project. Cover pictures found on Commons
 keep their own licenses, and the skill prints the credit line a license asks for.
