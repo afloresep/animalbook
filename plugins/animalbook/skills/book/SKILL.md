@@ -24,9 +24,11 @@ The work goes in this order. Each step says when to stop for the user.
 python3 <skill>/scripts/check_deps.py
 ```
 
-If it prints missing items, show the user each line with its install command and
-stop until they say it is done. Never install anything yourself and never fall
-back to a simpler layout. Codex is needed only for generated cover animals.
+If it prints `missing` lines (exit code 1), show the user each one with its
+install command and stop until they say it is done. Lines marked `optional`
+(Codex, used only for generated cover animals) do not stop the run: mention them
+and go on. Never install anything yourself and never fall back to a simpler
+layout.
 
 ## 1. Plan a new book
 
@@ -82,10 +84,13 @@ cd <book_dir>
 lualatex -interaction=nonstopmode book.tex   # three times: contents, references, index
 ```
 
-The build passes when the log has no line starting with `!` and no
-`Overfull \hbox`. Render the part's pages and look at them:
+The build passes when `book.log` has no line starting with `!`,
+`Overfull \hbox`, `Overfull \vbox` or `Missing character` (a character the font
+lacks, which silently disappears from the PDF). Render the part's pages and look
+at them:
 
 ```bash
+mkdir -p /tmp/<book>-pages
 pdftoppm -r 70 -png -f <first> -l <last> book.pdf /tmp/<book>-pages/p
 ```
 

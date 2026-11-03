@@ -1,8 +1,9 @@
 """Check that every tool and LaTeX package the book skill needs is installed.
 
-Prints one line per missing item with the command that installs it, and exits 1.
-Prints "all dependencies found" and exits 0 when nothing is missing. It never
-installs anything itself: the user runs the printed commands.
+Prints one line per missing item with the command that installs it. Exits 1 when
+something the book or the cover needs is missing, and 0 when nothing is missing
+or only optional items are (Codex, needed only for generated cover animals). It
+never installs anything itself: the user runs the printed commands.
 
 Usage:
     python3 check_deps.py
@@ -47,6 +48,8 @@ LATEX_PACKAGES: dict[str, str] = {
 # LuaLaTeX loads fonts through luaotfload, which Debian ships apart from fontspec.
 LUAOTFLOAD_FILE = "luaotfload-main.lua"
 
+# Any of these draws the cover; render_cover.py uses the same list.
+CHROMIUM_NAMES = ("chromium", "chromium-browser", "google-chrome", "google-chrome-stable")
 # Chrome works in place of Chromium on macOS.
 MAC_CHROME = Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
 
@@ -98,9 +101,11 @@ def has_latex_package(name: str) -> bool:
 
 def _has_command(name: str, platform: str) -> bool:
     """Return whether a command is available, counting Chrome for Chromium on macOS."""
-    if shutil.which(name) is not None:
-        return True
-    return name == "chromium" and platform == "darwin" and MAC_CHROME.exists()
+    if name == "chromium":
+        if any(shutil.which(candidate) for candidate in CHROMIUM_NAMES):
+            return True
+        return platform == "darwin" and MAC_CHROME.exists()
+    return shutil.which(name) is not None
 
 
 def _command_hint(name: str, platform: str) -> str:
@@ -144,9 +149,13 @@ def main() -> int:
     if not missing:
         print("all dependencies found")
         return 0
-    for item in missing:
+    required = [item for item in missing if item.needed_for != GENERATED]
+    for item in required:
         print(f"missing {item.kind} {item.name} (needed for {item.needed_for}): {item.install}")
-    return 1
+    for item in missing:
+        if item.needed_for == GENERATED:
+            print(f"optional: {item.name} (needed only for {item.needed_for}): {item.install}")
+    return 1 if required else 0
 
 
 if __name__ == "__main__":

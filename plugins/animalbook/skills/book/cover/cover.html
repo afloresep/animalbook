@@ -11,7 +11,10 @@
   @font-face { font-family: "CoverSans"; font-weight: 600; src: url("{{fontdir}}/{{sans_semibold}}"); }
   @font-face { font-family: "CoverSans"; font-weight: 700; src: url("{{fontdir}}/{{sans_bold}}"); }
   @page { size: 7in 9.19in; margin: 0; }
+  /* overflow on html, not only body: when printing, a ribbon poking past the
+     page edge would otherwise make Chromium shrink the whole cover to fit. */
   html, body { margin: 0; padding: 0; }
+  html { overflow: hidden; }
   body { width: 672px; height: 882px; overflow: hidden; position: relative; background: #fff;
          color: #111; font-family: "CoverSerif", serif;
          -webkit-print-color-adjust: exact; print-color-adjust: exact; }

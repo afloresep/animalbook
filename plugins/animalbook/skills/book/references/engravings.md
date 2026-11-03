@@ -46,12 +46,18 @@ Show the accepted ones (at most three) to the user and let them choose.
 
 ## 4. Clean the chosen image
 
-Download the full file (`file_url` in `candidates.json`) into the same
-untrusted folder. Then crop off any engraved caption or plate number, make it
-grayscale, and raise the levels until the paper is white:
+Download the full file of the chosen candidate into the same untrusted folder
+(the number is the one the search printed):
 
 ```bash
-convert full.jpg -crop 100%x88%+0+0 +repage -colorspace Gray -level 32%,74% <book>/cover/animal.png
+python3 <skill>/scripts/commons_search.py --download 3 --out /tmp/<book>-animal-1
+```
+
+Then crop off any engraved caption or plate number, make it grayscale, and
+raise the levels until the paper is white:
+
+```bash
+convert /tmp/<book>-animal-1/full-03.jpg -crop 100%x88%+0+0 +repage -colorspace Gray -level 32%,74% <book>/cover/animal.png
 ```
 
 Tune the crop and the two level values per image: look at the result, and
@@ -79,7 +85,8 @@ Write into `book.json`:
 - `cover.image`: `cover/animal.png`.
 - `cover.image_credit`: for a CC BY or CC BY-SA image, the credit line the license
   asks for: artist, source, license, for example
-  `T. Owen, Wellcome Collection, CC BY 4.0`. Empty for public domain, CC0 and
+  `T. Owen, Wellcome Collection, CC BY 4.0, cropped and toned`. CC BY asks that
+  changes be noted, so say what you changed. Empty for public domain, CC0 and
   generated images.
 
 Put the same facts in the book's colophon, with the file's Commons page URL

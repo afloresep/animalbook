@@ -1,5 +1,6 @@
 """Tests for reading Wikimedia Commons search results."""
 
+import dataclasses
 import json
 from pathlib import Path
 
@@ -59,3 +60,19 @@ def test_fetch_retries_after_too_many_requests(monkeypatch):
     monkeypatch.setattr(commons_search.time, "sleep", lambda seconds: None)
     assert commons_search.fetch("https://upload.wikimedia.org/x.jpg") == b"image"
     assert len(calls) == 2
+
+
+def test_download_saves_the_chosen_full_file(tmp_path, monkeypatch):
+    cands = commons_search.parse_imageinfo(load_fixture())
+    (tmp_path / "candidates.json").write_text(json.dumps([dataclasses.asdict(c) for c in cands]))
+    monkeypatch.setattr(commons_search, "fetch", lambda url: b"full image")
+    out = commons_search.download_full(tmp_path, 1)
+    assert out.read_bytes() == b"full image"
+    assert out.name.startswith("full-01")
+
+
+def test_artist_entities_are_unescaped():
+    response = load_fixture()
+    page = next(iter(response["query"]["pages"].values()))
+    page["imageinfo"][0]["extmetadata"]["Artist"] = {"value": "Smith &amp; Sons"}
+    assert commons_search.parse_imageinfo(response)[0].artist == "Smith & Sons"

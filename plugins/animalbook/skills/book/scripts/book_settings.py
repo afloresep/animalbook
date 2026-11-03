@@ -6,7 +6,8 @@ history goes, which parts are written, and the last build.
 """
 
 import json
-from dataclasses import asdict, dataclass, field
+import re
+from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 
 LAYOUTS = ("classic", "modern", "block")
@@ -16,6 +17,7 @@ SANS = ("IBM Plex Sans Condensed", "Fira Sans Condensed")
 MONO = "IBM Plex Mono"
 HISTORY = ("appendix", "callouts", "both", "none")
 PART_STATUS = ("planned", "written")
+HEX_COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 # family -> style -> file name in assets/fonts/. Sans families add "semibold" for
 # labels. Cormorant's Regular is too light for body text, so Medium stands in.
@@ -132,6 +134,13 @@ def _choice(value: object, allowed: tuple[str, ...], key: str) -> str:
     return str(value)
 
 
+def _reject_unknown(data: dict, allowed: tuple[str, ...], where: str = "") -> None:
+    """Raise a SettingsError for the first key that is not one of allowed."""
+    for key in data:
+        if key not in allowed:
+            raise SettingsError(f"{where}{key}: unknown key, expected one of {', '.join(allowed)}")
+
+
 def from_dict(data: dict) -> BookSettings:
     """Build and check settings from parsed JSON.
 
@@ -145,10 +154,15 @@ def from_dict(data: dict) -> BookSettings:
         SettingsError: If a key is missing or a value is not supported. The
             message names the key and, for choices, the allowed values.
     """
+    _reject_unknown(data, tuple(f.name for f in fields(BookSettings)))
     cover_data = _require(data, "cover")
+    _reject_unknown(cover_data, tuple(f.name for f in fields(Cover)), "cover.")
+    color = str(_require(cover_data, "color", "cover."))
+    if not HEX_COLOR.match(color):
+        raise SettingsError(f"cover.color: got '{color}', expected a color like #5b3a7a")
     cover = Cover(
         layout=_choice(_require(cover_data, "layout", "cover."), LAYOUTS, "cover.layout"),
-        color=str(_require(cover_data, "color", "cover.")),
+        color=color,
         tagline=str(cover_data.get("tagline", "")),
         ribbon=str(cover_data.get("ribbon", "")),
         image=str(_require(cover_data, "image", "cover.")),
@@ -156,6 +170,8 @@ def from_dict(data: dict) -> BookSettings:
     )
     parts = list(data.get("parts", []))
     for index, part in enumerate(parts):
+        if not isinstance(part, dict) or "title" not in part:
+            raise SettingsError(f'parts[{index}]: expected {{"title": ..., "status": ...}}')
         _choice(part.get("status"), PART_STATUS, f"parts[{index}].status")
     return BookSettings(
         title=str(_require(data, "title")),
@@ -186,7 +202,7 @@ def load(path: Path) -> BookSettings:
         FileNotFoundError: If the file does not exist.
     """
     try:
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as error:
         raise SettingsError(f"{path}: not valid JSON: {error}") from error
     return from_dict(data)
@@ -199,4 +215,5 @@ def save(settings: BookSettings, path: Path) -> None:
         settings: The settings to write.
         path: Destination path.
     """
-    path.write_text(json.dumps(asdict(settings), indent=2) + "\n")
+    path.write_text(json.dumps(asdict(settings), indent=2, ensure_ascii=False) + "\n",
+                    encoding="utf-8")

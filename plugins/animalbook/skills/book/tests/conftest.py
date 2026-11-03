@@ -46,12 +46,14 @@ def write_json(directory: Path, data: dict) -> Path:
     return path
 
 
+# A build passes only when its log has none of these: errors, text running past
+# the margin or the page bottom, and characters the font does not have.
+PROBLEM_PREFIXES = ("!", "Overfull \\hbox", "Overfull \\vbox", "Missing character")
+
+
 def latex_problems(log: str) -> list[str]:
-    """Return the error lines and overfull-box warnings of a LaTeX log."""
-    return [
-        line for line in log.splitlines()
-        if line.startswith("!") or line.startswith("Overfull \\hbox")
-    ]
+    """Return the lines of a LaTeX log that make a build fail."""
+    return [line for line in log.splitlines() if line.startswith(PROBLEM_PREFIXES)]
 
 
 def build_sample(tmp_path: Path, callouts: str | None = None) -> tuple[Path, str]:

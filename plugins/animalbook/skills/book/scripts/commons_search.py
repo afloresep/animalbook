@@ -7,9 +7,11 @@ changes or reuse (ND, NC, fair use, unknown).
 Usage:
     python3 commons_search.py --query "cuckoo engraving" --out <new empty dir>
     python3 commons_search.py --category "Cuculus canorus in art" --out <new empty dir>
+    python3 commons_search.py --download 3 --out <the same dir>   # full file of candidate 03
 """
 
 import argparse
+import html
 import json
 import re
 import sys
@@ -80,7 +82,7 @@ def is_usable_license(name: str) -> bool:
 def _meta(info: dict, key: str) -> str:
     """Return one extmetadata value as plain text, or "" when it is missing."""
     value = info.get("extmetadata", {}).get(key, {}).get("value", "")
-    return TAGS.sub("", str(value)).strip()
+    return html.unescape(TAGS.sub("", str(value))).strip()
 
 
 def parse_imageinfo(response: dict) -> list[Candidate]:
@@ -199,14 +201,42 @@ def download_thumbnails(candidates: list[Candidate], out_dir: Path) -> None:
     (out_dir / "candidates.json").write_text(json.dumps([asdict(c) for c in candidates], indent=1))
 
 
+def download_full(out_dir: Path, number: int) -> Path:
+    """Download the full image of one candidate listed in out_dir/candidates.json.
+
+    Args:
+        out_dir: The folder a search wrote its thumbnails and candidates.json to.
+        number: The candidate's number as the search printed it (1 for "01").
+
+    Returns:
+        Path of the saved file, `full-NN.<extension>` in out_dir.
+
+    Raises:
+        FileNotFoundError: If out_dir has no candidates.json.
+        IndexError: If number is not in the list.
+    """
+    candidates = json.loads((out_dir / "candidates.json").read_text(encoding="utf-8"))
+    if not 1 <= number <= len(candidates):
+        raise IndexError(f"candidate {number} not found; the list has {len(candidates)}")
+    url = candidates[number - 1]["file_url"]
+    suffix = Path(urllib.parse.urlparse(url).path).suffix.lower() or ".jpg"
+    out = out_dir / f"full-{number:02d}{suffix}"
+    out.write_bytes(fetch(url))
+    return out
+
+
 def main() -> int:
     """Run a search from the command line and print the numbered candidates."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--query")
     group.add_argument("--category")
+    group.add_argument("--download", type=int, metavar="N")
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
+    if args.download is not None:
+        print(f"saved {download_full(args.out, args.download)}")
+        return 0
     found = search(args.query) if args.query else category(args.category)
     download_thumbnails(found, args.out)
     for number, candidate in enumerate(found, start=1):

@@ -11,7 +11,8 @@ def tex_files_present(monkeypatch):
 
 def test_reports_missing_command_with_install_hint(monkeypatch):
     monkeypatch.setattr(
-        check_deps.shutil, "which", lambda name: None if name == "chromium" else "/usr/bin/x"
+        check_deps.shutil, "which",
+        lambda name: None if name in check_deps.CHROMIUM_NAMES else "/usr/bin/x",
     )
     monkeypatch.setattr(check_deps, "has_latex_package", lambda name: True)
     missing = check_deps.check("linux")
@@ -43,3 +44,18 @@ def test_missing_luaotfload_is_reported(monkeypatch):
     (item,) = check_deps.check("linux")
     assert item.name == "luaotfload"
     assert item.install == "sudo apt install texlive-luatex"
+
+
+def test_only_codex_missing_exits_zero(monkeypatch, capsys):
+    monkeypatch.setattr(check_deps.shutil, "which", lambda name: None if name == "codex" else "/usr/bin/x")
+    monkeypatch.setattr(check_deps, "has_latex_package", lambda name: True)
+    assert check_deps.main() == 0
+    assert "optional" in capsys.readouterr().out
+
+
+def test_google_chrome_counts_as_chromium(monkeypatch):
+    present = {"google-chrome"}
+    monkeypatch.setattr(check_deps.shutil, "which",
+                        lambda name: "/usr/bin/x" if name in present or name not in check_deps.CHROMIUM_NAMES else None)
+    monkeypatch.setattr(check_deps, "has_latex_package", lambda name: True)
+    assert check_deps.check("linux") == []

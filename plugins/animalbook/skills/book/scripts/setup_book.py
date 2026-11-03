@@ -31,11 +31,18 @@ def copy_style(book_dir: Path) -> None:
 
     Raises:
         FileNotFoundError: If a part of the skill's style is missing.
+        FileExistsError: If `book_dir/style/` exists but was not written by this
+            script (it has no animalbook.sty), so replacing it could delete the
+            user's files.
     """
     for source in STYLE_SOURCES.values():
         if not source.exists():
             raise FileNotFoundError(f"skill style is incomplete, missing {source}")
     style_dir = book_dir / "style"
+    if style_dir.exists() and not (style_dir / "animalbook.sty").is_file():
+        raise FileExistsError(
+            f"{style_dir} exists and was not made by setup_book.py; move it away first"
+        )
     if style_dir.exists():
         shutil.rmtree(style_dir)
     style_dir.mkdir(parents=True)
@@ -90,7 +97,7 @@ def write_options(settings: BookSettings, book_dir: Path) -> Path:
         + _font_command("animalbookmono", book_settings.MONO, FOUR_STYLES)
     )
     out = style_dir / "options.tex"
-    out.write_text(text)
+    out.write_text(text, encoding="utf-8")
     return out
 
 

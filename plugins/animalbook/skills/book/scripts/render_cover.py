@@ -15,13 +15,13 @@ from pathlib import Path
 
 import book_settings
 from book_settings import BookSettings
+from check_deps import CHROMIUM_NAMES, MAC_CHROME
 
 SKILL_DIR = Path(__file__).resolve().parents[1]
 TEMPLATE = SKILL_DIR / "cover" / "cover.html"
 
-# Cover size in CSS pixels (7 x 9.19 in at 96 px per inch).
-WIDTH_PX = 672
-HEIGHT_PX = 883
+# The preview PNG is rendered from the PDF at screen resolution.
+PNG_DPI = 96
 
 # layout -> (largest title size in px, characters that fit at that size, smallest size).
 # Past the character budget the size shrinks in proportion, down to the floor.
@@ -35,8 +35,6 @@ TITLE_SIZES: dict[str, tuple[int, int, int]] = {
 # as "Learning" over "Python"; longer titles go whole into the band.
 CLASSIC_SPLIT_MAX_WORDS = 4
 
-CHROMIUM_NAMES = ("chromium", "chromium-browser", "google-chrome")
-MAC_CHROME = Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
 
 
 def split_title(title: str, layout: str) -> tuple[str, str]:
@@ -83,6 +81,17 @@ def _title_html(settings: BookSettings, main: str, image_url: str) -> str:
     return f"{title}{subtitle}{art}"
 
 
+def _require_files(settings: BookSettings, book_dir: Path) -> None:
+    """Raise FileNotFoundError naming the first missing image or font file."""
+    needed = [book_dir / settings.cover.image]
+    font_dir = book_dir / "style" / "fonts"
+    for family in (settings.serif, settings.sans):
+        needed += [font_dir / name for name in book_settings.FONT_FILES[family].values()]
+    for path in needed:
+        if not path.is_file():
+            raise FileNotFoundError(f"cover needs {path}; run setup_book.py and check cover.image")
+
+
 def fill_cover(settings: BookSettings, book_dir: Path) -> str:
     """Fill the cover template.
 
@@ -92,8 +101,13 @@ def fill_cover(settings: BookSettings, book_dir: Path) -> str:
 
     Returns:
         The cover as an HTML document.
+
+    Raises:
+        FileNotFoundError: If the animal picture or a font file is missing, so the
+            cover would otherwise render with fallback fonts or no picture.
     """
     cover = settings.cover
+    _require_files(settings, book_dir)
     kicker, main = split_title(settings.title, cover.layout)
     serif = book_settings.FONT_FILES[settings.serif]
     sans = book_settings.FONT_FILES[settings.sans]
@@ -144,7 +158,10 @@ def find_chromium() -> str:
 
 
 def render(html_path: Path, pdf_out: Path, png_out: Path) -> None:
-    """Save an HTML cover as a one-page PDF and a PNG preview.
+    """Save an HTML cover as a one-page PDF and a PNG made from that PDF.
+
+    The PNG comes from the PDF, not from a screenshot, so it shows exactly the
+    page that goes into the book.
 
     Args:
         html_path: The filled cover HTML.
@@ -153,16 +170,14 @@ def render(html_path: Path, pdf_out: Path, png_out: Path) -> None:
 
     Raises:
         FileNotFoundError: If Chromium is missing.
-        subprocess.CalledProcessError: If Chromium fails.
+        subprocess.CalledProcessError: If Chromium or pdftoppm fails.
     """
     chromium = find_chromium()
-    common = [chromium, "--headless", "--disable-gpu", "--allow-file-access-from-files",
-              "--hide-scrollbars", "--force-color-profile=srgb"]
-    url = html_path.resolve().as_uri()
-    subprocess.run(common + ["--no-pdf-header-footer", f"--print-to-pdf={pdf_out}", url],
-                   check=True, capture_output=True)
-    subprocess.run(common + [f"--window-size={WIDTH_PX},{HEIGHT_PX}", f"--screenshot={png_out}", url],
-                   check=True, capture_output=True)
+    subprocess.run([chromium, "--headless", "--disable-gpu", "--allow-file-access-from-files",
+                    "--no-pdf-header-footer", f"--print-to-pdf={pdf_out}",
+                    html_path.resolve().as_uri()], check=True, capture_output=True)
+    subprocess.run(["pdftoppm", "-r", str(PNG_DPI), "-png", "-singlefile", str(pdf_out),
+                    str(png_out.with_suffix(""))], check=True, capture_output=True)
 
 
 def main() -> int:
