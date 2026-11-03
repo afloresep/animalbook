@@ -1,11 +1,6 @@
 """Tests for the dependency check."""
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-
-import check_deps  # noqa: E402
+import check_deps
 
 
 def test_reports_missing_command_with_install_hint(monkeypatch):
