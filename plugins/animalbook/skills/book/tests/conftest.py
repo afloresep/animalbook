@@ -76,3 +76,8 @@ def build_sample(tmp_path: Path, callouts: str | None = None) -> tuple[Path, str
 def pdfinfo(pdf: Path) -> str:
     """Return the output of pdfinfo for a PDF."""
     return subprocess.run(["pdfinfo", str(pdf)], capture_output=True, text=True, check=True).stdout
+
+
+def replace_cover(settings: "book_settings.BookSettings", **fields: str) -> "book_settings.BookSettings":
+    """Return settings with some cover fields replaced."""
+    return dataclasses.replace(settings, cover=dataclasses.replace(settings.cover, **fields))

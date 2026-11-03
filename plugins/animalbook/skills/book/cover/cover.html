@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<title>{{title}}</title>
+<style>
+  /* Cover template for the book skill. render_cover.py fills every {{...}} and
+     sets the layout class on <body>: classic, modern or block. The page is the
+     book's trim size, 7 x 9.19 in, which is 672 x 882 CSS pixels. */
+  @font-face { font-family: "CoverSerif"; src: url("{{fontdir}}/{{serif_regular}}"); }
+  @font-face { font-family: "CoverSerif"; font-style: italic; src: url("{{fontdir}}/{{serif_italic}}"); }
+  @font-face { font-family: "CoverSans"; src: url("{{fontdir}}/{{sans_regular}}"); }
+  @font-face { font-family: "CoverSans"; font-weight: 600; src: url("{{fontdir}}/{{sans_semibold}}"); }
+  @font-face { font-family: "CoverSans"; font-weight: 700; src: url("{{fontdir}}/{{sans_bold}}"); }
+  @page { size: 7in 9.19in; margin: 0; }
+  html, body { margin: 0; padding: 0; }
+  body { width: 672px; height: 882px; overflow: hidden; position: relative; background: #fff;
+         color: #111; font-family: "CoverSerif", serif;
+         -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page { position: absolute; inset: 0; display: flex; flex-direction: column; }
+  /* The image is pinned inside its box so a tall picture can never push the footer off. */
+  .art { flex: 1; min-height: 0; position: relative; }
+  .art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
+             mix-blend-mode: multiply;
+             -webkit-mask-image: radial-gradient(ellipse 72% 70% at 50% 50%, #000 70%, transparent 100%);
+             mask-image: radial-gradient(ellipse 72% 70% at 50% 50%, #000 70%, transparent 100%); }
+  .imprint { font: 700 21px/1 "CoverSans", sans-serif; letter-spacing: 1px; }
+  .ribbon { position: absolute; top: 38px; right: -88px; width: 320px; transform: rotate(45deg);
+            background: #222; color: #fff; text-align: center; padding: 8px 0;
+            font: 700 17px/1.25 "CoverSans", sans-serif; }
+  .credit { position: absolute; bottom: 8px; left: 0; right: 0; text-align: center;
+            font: 10px/1 "CoverSans", sans-serif; color: #777; }
+  .kicker:empty, .tagline:empty, .subtitle:empty { display: none; }
+
+  /* classic: tagline, small italic kicker, title in a solid band, animal below */
+  .classic .bar { height: 20px; margin: 0 9%; background: {{color}}; flex: none; }
+  .classic .tagline { margin: 22px 26% 0 9%; font-style: italic; font-size: 22px; line-height: 1.2; }
+  .classic .kicker { margin: 36px 9% 0; font-style: italic; font-size: 46px; line-height: 1.1; }
+  .classic .title { margin: 10px 9% 0; min-height: 150px; padding: 12px 22px; box-sizing: border-box;
+                    background: {{color}}; color: #fff; display: flex; align-items: center;
+                    justify-content: center; text-align: center; font-size: {{title_size}}px;
+                    line-height: 1.05; }
+  .classic .subtitle { display: none; }
+  .classic .art { margin: 26px 12% 0; }
+  .classic .foot { flex: none; display: flex; justify-content: space-between; align-items: baseline;
+                   margin: 16px 9% 40px; }
+  .classic .author { font-style: italic; font-size: 26px; }
+
+  /* modern: colored top bar with the imprint, big sans title, animal fills the rest */
+  .modern .bar { height: 46px; background: {{color}}; flex: none; display: flex; align-items: center;
+                 padding-left: 8%; }
+  .modern .bar .imprint { color: #fff; font-size: 19px; }
+  .modern .tagline, .modern .kicker { display: none; }
+  .modern .title { margin: 44px 8% 0; font: 700 {{title_size}}px/1.02 "CoverSans", sans-serif;
+                   color: {{color}}; }
+  .modern .subtitle { margin: 20px 20% 0 8%; font: 30px/1.25 "CoverSans", sans-serif; }
+  .modern .art { margin: 20px 1% 0; }
+  .modern .foot { flex: none; display: flex; justify-content: flex-end; margin: 10px 8% 36px; }
+  .modern .foot .imprint { display: none; }
+  .modern .author { font: 25px/1 "CoverSans", sans-serif; }
+  .modern .ribbon { background: #eee; color: #222; }
+
+  /* block: animal on top, title and subtitle in a solid block the animal overlaps */
+  .block .bar { height: 46px; margin: 0 8%; background: {{color}}; flex: none; display: flex;
+                align-items: center; padding-left: 3%; }
+  .block .bar .imprint { color: #fff; font-size: 19px; }
+  .block .tagline, .block .kicker { display: none; }
+  .block .art { margin: 16px 6% -40px; }
+  .block .titleblock { margin: 0 8%; padding: 52px 5% 34px; background: {{color}}; color: #fff; flex: none; }
+  .block .title { font-size: {{title_size}}px; line-height: 1; }
+  .block .subtitle { margin-top: 18px; font: 600 18px/1.3 "CoverSans", sans-serif; letter-spacing: 1.5px;
+                     text-transform: uppercase; }
+  .block .foot { flex: none; display: flex; justify-content: flex-end; margin: 18px 8% 40px; }
+  .block .foot .imprint { display: none; }
+  .block .author { font: 25px/1 "CoverSans", sans-serif; }
+</style></head>
+<body class="{{layout}}">
+<div class="page">
+  <div class="bar"><span class="imprint">{{imprint_in_bar}}</span></div>
+  <div class="tagline">{{tagline}}</div>
+  <div class="kicker">{{kicker}}</div>
+  {{title_html}}
+  <div class="foot"><span class="imprint">{{imprint}}</span><span class="author">{{author}}</span></div>
+</div>
+{{ribbon_html}}
+{{credit_html}}
+</body></html>
