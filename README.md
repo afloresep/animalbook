@@ -34,7 +34,7 @@ affiliated with any publisher, and no publisher's name or logo appears in them.
 In Claude Code:
 
 ```
-/plugin marketplace add <path or git URL of this repository>
+/plugin marketplace add afloresep/animalbook
 /plugin install animalbook@animalbook
 ```
 
