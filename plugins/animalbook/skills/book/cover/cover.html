@@ -21,10 +21,10 @@
   .page { position: absolute; inset: 0; display: flex; flex-direction: column; }
   /* The image is pinned inside its box so a tall picture can never push the footer off. */
   .art { flex: 1; min-height: 0; position: relative; }
-  .art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
-             mix-blend-mode: multiply;
-             -webkit-mask-image: radial-gradient(ellipse 72% 70% at 50% 50%, #000 70%, transparent 100%);
-             mask-image: radial-gradient(ellipse 72% 70% at 50% 50%, #000 70%, transparent 100%); }
+  /* The picture arrives as black ink on a transparent background with soft edges
+     (render_cover.prepare_art), so it needs no blend mode or mask: some PDF viewers,
+     such as macOS Preview, draw those badly. */
+  .art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
   .imprint { font: 700 21px/1 "CoverSans", sans-serif; letter-spacing: 1px; }
   .ribbon { position: absolute; top: 38px; right: -88px; width: 320px; transform: rotate(45deg);
             background: #222; color: #fff; text-align: center; padding: 8px 0;

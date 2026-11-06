@@ -73,3 +73,17 @@ def test_cover_with_ribbon_prints_full_size_with_footer(book_dir):
 def test_missing_font_or_image_stops_the_cover(tmp_path):
     with pytest.raises(FileNotFoundError, match="animal.png"):
         render_cover.fill_cover(SAMPLE, tmp_path)
+
+
+def test_cover_uses_no_viewer_effects(book_dir):
+    html = render_cover.fill_cover(SAMPLE, book_dir)
+    assert "mix-blend-mode" not in html
+    assert "mask-image" not in html
+
+
+def test_prepared_art_is_transparent_at_the_edges(tmp_path):
+    out = tmp_path / "art.png"
+    render_cover.prepare_art(MOCKUP_ANIMAL, out)
+    corner = subprocess.run(["convert", str(out), "-format", "%[fx:p{0,0}.a]", "info:"],
+                            capture_output=True, text=True, check=True).stdout
+    assert float(corner) == 0.0

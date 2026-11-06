@@ -23,6 +23,13 @@ TEMPLATE = SKILL_DIR / "cover" / "cover.html"
 # The preview PNG is rendered from the PDF at screen resolution.
 PNG_DPI = 96
 
+# The prepared picture: black ink whose opacity is the darkness of the original.
+# Tones lighter than PAPER_CUTOFF (leftover paper color, scan noise) become fully
+# transparent. No edge fade: an engraving often touches its frame, and a fade
+# would eat the animal.
+ART_NAME = "art.png"
+PAPER_CUTOFF = "8%"
+
 # layout -> (largest title size in px, characters that fit at that size, smallest size).
 # Past the character budget the size shrinks in proportion, down to the floor.
 TITLE_SIZES: dict[str, tuple[int, int, int]] = {
@@ -71,6 +78,26 @@ def title_size(title: str, layout: str) -> int:
     return max(floor, int(largest * budget / len(main)))
 
 
+def prepare_art(source: Path, out: Path) -> None:
+    """Turn a cover picture into black ink on a transparent background.
+
+    The opacity of each pixel is how dark it is in the original, so white paper
+    becomes transparent and the picture sits on white or on a color block alike.
+    The cover then needs no blend mode or mask, which some PDF viewers (macOS
+    Preview) draw badly.
+
+    Args:
+        source: The cleaned animal picture (grayscale or color, white background).
+        out: Destination PNG.
+
+    Raises:
+        subprocess.CalledProcessError: If ImageMagick fails.
+    """
+    subprocess.run(["convert", str(source), "-colorspace", "Gray", "-negate",
+                    "-level", f"{PAPER_CUTOFF},100%", "-background", "black",
+                    "-alpha", "shape", str(out)], check=True, capture_output=True)
+
+
 def _title_html(settings: BookSettings, main: str, image_url: str) -> str:
     """Return the title, subtitle and animal markup in the order the layout needs."""
     title = f'<div class="title">{html.escape(main)}</div>'
@@ -99,6 +126,8 @@ def fill_cover(settings: BookSettings, book_dir: Path) -> str:
         settings: The book's settings.
         book_dir: The book folder; fonts and the image are read from it.
 
+    Writes the prepared picture to `book_dir/cover/art.png` (see prepare_art).
+
     Returns:
         The cover as an HTML document.
 
@@ -108,6 +137,9 @@ def fill_cover(settings: BookSettings, book_dir: Path) -> str:
     """
     cover = settings.cover
     _require_files(settings, book_dir)
+    art = book_dir / "cover" / ART_NAME
+    art.parent.mkdir(exist_ok=True)
+    prepare_art(book_dir / cover.image, art)
     kicker, main = split_title(settings.title, cover.layout)
     serif = book_settings.FONT_FILES[settings.serif]
     sans = book_settings.FONT_FILES[settings.sans]
@@ -118,7 +150,7 @@ def fill_cover(settings: BookSettings, book_dir: Path) -> str:
         "color": cover.color,
         "title": html.escape(settings.title),
         "title_size": str(title_size(settings.title, cover.layout)),
-        "title_html": _title_html(settings, main, (book_dir / cover.image).resolve().as_uri()),
+        "title_html": _title_html(settings, main, art.resolve().as_uri()),
         "kicker": html.escape(kicker),
         "tagline": html.escape(cover.tagline),
         "author": html.escape(settings.author),
