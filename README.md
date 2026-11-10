@@ -47,32 +47,43 @@ book" or "make a cover for the book".
 
 ## What it needs
 
-On its first run on a machine the skill checks for everything below and tells you
-the install command for anything missing. It never installs anything itself.
+On its first run on a machine the skill checks for everything below and shows
+you the few commands that install what is missing, in order. It never installs
+anything itself.
 
-- LuaLaTeX with `fontspec`, `luaotfload`, `titlesec`, `tcolorbox`, `enumitem`,
-  `imakeidx`, `pdfpages`, `listings`, `fancyhdr`, `caption` and TikZ. On
-  macOS, `setup_env.sh` (below) installs TinyTeX with exactly these, a few
-  hundred MB; you do not need MacTeX. On Debian or Ubuntu: `sudo apt install
-  texlive-luatex texlive-latex-extra texlive-pictures`.
+- LuaLaTeX with the packages of the book style. On macOS, `setup_env.sh`
+  (below) installs TinyTeX with exactly these, a few hundred MB; you do not
+  need MacTeX. On Debian or Ubuntu: `sudo apt install texlive-luatex
+  texlive-latex-extra texlive-pictures`.
 - Poppler (`pdftoppm`, `pdfinfo`) and ImageMagick (`convert`).
 - Chromium or Google Chrome, to draw the cover.
-- Codex CLI, only for generated cover animals.
 - Python 3.9 or newer, the one macOS ships. The scripts use the standard
   library only.
-- Optional, only for recordings: ffmpeg and a speech-to-text tool, in one of
-  two sizes. `light` is whisper.cpp with a compressed Whisper model (about
-  0.6 GB, any Mac); `full` is mlx-whisper with the full model (about 3.3 GB,
-  most of it PyTorch, Apple Silicon only).
+- Optional: Codex CLI, only for generated cover animals.
+- Optional, only for recordings: ffmpeg, and a speech-to-text tool for
+  recordings that come without a `.vtt` transcript. It comes in two sizes:
+  `light` is whisper.cpp with a compressed Whisper model (about 0.6 GB, any
+  Mac); `full` is mlx-whisper with the full model (about 3.3 GB, most of it
+  PyTorch, Apple Silicon only).
 
-On macOS one script installs what is missing into `~/.animalbook`, with no
-admin rights and no Homebrew needed: TinyTeX, and Poppler and ImageMagick when
-Homebrew did not provide them. It adds `~/.animalbook/bin` to `PATH` in
-`~/.zshrc`. Add `--whisper light` or `--whisper full` for recordings.
-`remove_env.sh` removes it all again.
+### On macOS
+
+One script installs what is missing into `~/.animalbook`, with no admin rights
+and no Homebrew needed: TinyTeX, and Poppler and ImageMagick when Homebrew did
+not provide them. It adds `~/.animalbook/bin` to `PATH` in `~/.zshrc` and is
+safe to run again. The skill prints the command with the script's full path
+inside the installed plugin. From a clone of this repository it is:
 
 ```
-bash plugins/animalbook/skills/book/scripts/setup_env.sh [--whisper light|full]
+bash plugins/animalbook/skills/book/scripts/setup_env.sh
+```
+
+For recordings, add one option: `--recordings` (ffmpeg only, when every
+recording has a `.vtt`), `--whisper light` or `--whisper full`.
+
+To remove everything it installed:
+
+```
 bash plugins/animalbook/skills/book/scripts/remove_env.sh
 ```
 

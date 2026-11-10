@@ -75,11 +75,18 @@ def test_crop_must_be_four_numbers():
             pr.crop_box(bad)
 
 
-def _fake_tools(monkeypatch, present):
-    """Pretend only `present` commands exist, and record the commands run."""
+def _fake_tools(monkeypatch, present, out_dir):
+    """Pretend only `present` commands exist, and record the commands run. A fake
+    Whisper writes its unfinished transcript, as the real ones do."""
     run = []
+
+    def fake_run(command, **kwargs):
+        run.append(command)
+        if command[0] in ("mlx_whisper", "whisper-cli"):
+            (out_dir / "transcript.part.vtt").write_text("WEBVTT\n")
+
     monkeypatch.setattr(pr.shutil, "which", lambda name: "/x" if name in present else None)
-    monkeypatch.setattr(pr.subprocess, "run", lambda command, **kwargs: run.append(command))
+    monkeypatch.setattr(pr.subprocess, "run", fake_run)
     return run
 
 
@@ -87,22 +94,44 @@ def test_light_whisper_runs_whisper_cpp_on_16_khz_audio(monkeypatch, tmp_path):
     model = tmp_path / "model.bin"
     model.write_bytes(b"")
     monkeypatch.setattr(pr, "LIGHT_MODEL", model)
-    run = _fake_tools(monkeypatch, {"whisper-cli", "ffmpeg"})
+    run = _fake_tools(monkeypatch, {"whisper-cli", "ffmpeg"}, tmp_path)
     _, source = pr.transcribe(tmp_path / "clase.mp4", tmp_path, None)
     assert run[0][0] == "ffmpeg" and "16000" in run[0]
     assert run[1][:3] == ["whisper-cli", "-m", str(model)]
     assert run[1][run[1].index("-l") + 1] == "auto"  # whisper.cpp assumes English otherwise
     assert "whisper.cpp" in source
+    assert (tmp_path / "transcript.vtt").exists() and not (tmp_path / "transcript.part.vtt").exists()
+
+
+def test_earlier_transcript_is_reused_unless_retranscribe(monkeypatch, tmp_path):
+    run = _fake_tools(monkeypatch, {"mlx_whisper"}, tmp_path)
+    (tmp_path / "transcript.vtt").write_text("WEBVTT\n")
+    _, source = pr.transcribe(tmp_path / "clase.mp4", tmp_path, None)
+    assert run == [] and "--retranscribe" in source
+    pr.transcribe(tmp_path / "clase.mp4", tmp_path, "es", retranscribe=True)
+    assert run[0][0] == "mlx_whisper"
+
+
+def test_interrupted_whisper_leaves_no_transcript(monkeypatch, tmp_path):
+    def interrupted(command, **kwargs):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(pr.shutil, "which", lambda name: "/x" if name == "mlx_whisper" else None)
+    monkeypatch.setattr(pr.subprocess, "run", interrupted)
+    with pytest.raises(KeyboardInterrupt):
+        pr.transcribe(tmp_path / "clase.mp4", tmp_path, None)
+    assert not (tmp_path / "transcript.vtt").exists()
 
 
 def test_full_whisper_wins_when_both_are_installed(monkeypatch, tmp_path):
-    run = _fake_tools(monkeypatch, {"whisper-cli", "mlx_whisper", "ffmpeg"})
+    run = _fake_tools(monkeypatch, {"whisper-cli", "mlx_whisper", "ffmpeg"}, tmp_path)
     _, source = pr.transcribe(tmp_path / "clase.mp4", tmp_path, "es")
     assert run[0][0] == "mlx_whisper" and "mlx-whisper" in source
 
 
 def test_no_whisper_says_how_to_get_one(monkeypatch, tmp_path):
-    _fake_tools(monkeypatch, {"ffmpeg"})
+    _fake_tools(monkeypatch, {"ffmpeg"}, tmp_path)
+    monkeypatch.setattr(pr.sys, "platform", "darwin")
     with pytest.raises(SystemExit, match="setup_env.sh --whisper light"):
         pr.transcribe(tmp_path / "clase.mp4", tmp_path, None)
 
@@ -144,8 +173,9 @@ def _run(*args):
 @needs_tools
 def test_slides_get_their_time_and_words(lecture):
     tmp_path, video = lecture
-    _run(video, "--slides", tmp_path / "slides.pdf", "--crop", "480:270:0:0")
-    text = (tmp_path / "clase.mp4.prepared" / "recording.md").read_text()
+    out = tmp_path / "book" / "recordings" / "clase"
+    _run(video, "--slides", tmp_path / "slides.pdf", "--crop", "480:270:0:0", "--out", out)
+    text = (out / "recording.md").read_text()
     assert text.index("## Slide 1, 00:00-00:0") < text.index("círculo")
     assert text.index("círculo") < text.index("## Slide 2, 00:0") < text.index("rectángulo")
 
@@ -157,3 +187,23 @@ def test_without_slides_each_screen_gets_a_capture(lecture):
     out = tmp_path / "clase.mp4.prepared"
     assert len(list((out / "frames").glob("*.png"))) == 2
     assert (out / "recording.md").read_text().count("screen `frames/") == 2
+
+
+@needs_tools
+def test_preview_of_a_short_clip_is_a_real_frame(lecture):
+    tmp_path, video = lecture  # 12 s: one minute in is past the end
+    _run(video, "--preview")
+    assert (tmp_path / "clase.mp4.prepared" / "preview.png").stat().st_size > 0
+
+
+@needs_tools
+def test_audio_with_cover_art_keeps_its_transcript(lecture):
+    tmp_path, _ = lecture
+    audio = tmp_path / "charla.m4a"
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-t", "5", "-i", "sine=frequency=440",
+                    "-i", str(tmp_path / "a.png"), "-map", "0", "-map", "1", "-c:a", "aac", "-c:v", "png",
+                    "-disposition:v", "attached_pic", str(audio)], check=True)
+    (tmp_path / "charla.vtt").write_text("WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nla portada no es un vídeo\n")
+    assert not pr.has_video(audio)
+    _run(audio, "--slides", tmp_path / "slides.pdf")
+    assert "la portada no es un vídeo" in (tmp_path / "charla.m4a.prepared" / "recording.md").read_text()

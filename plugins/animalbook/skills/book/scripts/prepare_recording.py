@@ -1,6 +1,6 @@
 """Turn a video or audio recording into text a book can be written from.
 
-Writes `<recording>.prepared/` next to the recording:
+Writes into `--out` (default: `<recording>.prepared/` next to the recording):
 
 - `transcript.vtt`: the transcript with timestamps. A `.vtt` next to the
   recording with the same name (a Teams or Zoom export) is used as is;
@@ -17,10 +17,13 @@ second, of the area `--crop` names. A new screen counts only when it differs
 from the last one kept and then stays still for a few seconds, so a person
 talking or moving on camera does not count as a change.
 
+A transcript from an earlier run is reused; `--retranscribe` makes a new one
+(after changing `--language`, or when the recording changed).
+
 Usage:
-    python3 prepare_recording.py <recording> --preview          # one frame, to choose --crop
-    python3 prepare_recording.py <recording> [--slides deck.pdf] [--crop W:H:X:Y]
-        [--language es] [--max-captures-per-hour 240]
+    python3 prepare_recording.py <recording> --preview [--out DIR]   # one frame, to choose --crop
+    python3 prepare_recording.py <recording> [--out DIR] [--slides deck.pdf] [--crop W:H:X:Y]
+        [--language es] [--retranscribe] [--max-captures-per-hour 240]
 """
 
 from __future__ import annotations
@@ -35,14 +38,14 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from check_deps import GET_LIGHT_MODEL, LIGHT_MODEL
+
 ENV_DIR = Path.home() / ".animalbook"
 # Full: mlx-whisper, the model from Hugging Face, kept under HF_CACHE by setup_env.sh.
 WHISPER_MODEL = "mlx-community/whisper-large-v3-turbo"
 HF_CACHE = ENV_DIR / "models" / "hf"
-# Light: whisper.cpp (whisper-cli) and the same model compressed to 5 bits, about 0.6 GB.
-LIGHT_MODEL = ENV_DIR / "models" / "ggml-large-v3-turbo-q5_0.bin"
-NO_WHISPER = ("no speech-to-text tool found: export the transcript as a .vtt next to the "
-              "recording, or install one with setup_env.sh --whisper light (or --whisper full)")
+# Light: whisper.cpp (whisper-cli) and the same model compressed to 5 bits, about
+# 0.6 GB, at LIGHT_MODEL (from check_deps, which checks for it).
 _CROP = re.compile(r"\d+:\d+:\d+:\d+")
 
 # Samples are this small: enough to tell slides apart, cheap to compare in pure Python.
@@ -114,43 +117,58 @@ def parse_vtt(text: str) -> list[Cue]:
     return cues
 
 
-def transcribe(recording: Path, out_dir: Path, language: str | None) -> tuple[Path, str]:
+def _no_whisper() -> str:
+    """Say how to get a transcript on this platform when no Whisper is installed."""
+    first = "no speech-to-text tool found. Export the transcript as a .vtt next to the recording, or "
+    if sys.platform == "darwin":
+        return first + "run setup_env.sh --whisper light (about 0.6 GB; --whisper full is about 3.3 GB)"
+    return first + f"install whisper.cpp (whisper-cli) and its model: {GET_LIGHT_MODEL}"
+
+
+def transcribe(recording: Path, out_dir: Path, language: str | None,
+               retranscribe: bool = False) -> tuple[Path, str]:
     """Return the recording's transcript and where it came from, making one if none exists.
 
     A `.vtt` exported with the recording wins. Otherwise mlx-whisper (full) is
-    used when installed, else whisper.cpp (light).
+    used when installed, else whisper.cpp (light). Whisper writes to a
+    `.part` file that becomes `transcript.vtt` only when it finishes, so an
+    interrupted run never leaves a transcript that looks complete.
     """
     target = out_dir / "transcript.vtt"
     exported = recording.with_suffix(".vtt")
     if exported.exists():
         shutil.copyfile(exported, target)
         return target, "exported with the recording"
-    if target.exists():
-        return target, "made with Whisper in an earlier run"
+    if target.exists() and not retranscribe:
+        return target, "made with Whisper in an earlier run (--retranscribe makes a new one)"
+    part = out_dir / "transcript.part.vtt"
     if shutil.which("mlx_whisper"):
         command = ["mlx_whisper", str(recording), "--model", WHISPER_MODEL, "--output-format", "vtt",
-                   "--output-dir", str(out_dir), "--output-name", "transcript"]
+                   "--output-dir", str(out_dir), "--output-name", "transcript.part"]
         if language:
             command += ["--language", language]
         env = dict(os.environ)
         if "HF_HOME" not in env and HF_CACHE.is_dir():  # the model setup_env.sh downloaded
             env["HF_HOME"] = str(HF_CACHE)
         subprocess.run(command, check=True, env=env)
+        os.replace(part, target)
         return target, f"made with mlx-whisper ({WHISPER_MODEL})"
     if shutil.which("whisper-cli"):
         if not LIGHT_MODEL.exists():
-            raise SystemExit(f"whisper.cpp has no model at {LIGHT_MODEL}: run setup_env.sh --whisper light")
+            get = "setup_env.sh --whisper light" if sys.platform == "darwin" else GET_LIGHT_MODEL
+            raise SystemExit(f"whisper.cpp has no model at {LIGHT_MODEL}: {get}")
         # whisper.cpp reads 16 kHz mono WAV only.
         audio = out_dir / "audio.wav"
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(recording), "-vn", "-ac", "1", "-ar", "16000",
                         str(audio)], check=True)
         try:
             subprocess.run(["whisper-cli", "-m", str(LIGHT_MODEL), "-f", str(audio), "-l", language or "auto",
-                            "-ovtt", "-of", str(out_dir / "transcript")], check=True)
+                            "-ovtt", "-of", str(out_dir / "transcript.part")], check=True)
         finally:
             audio.unlink(missing_ok=True)
+        os.replace(part, target)
         return target, f"made with whisper.cpp ({LIGHT_MODEL.name})"
-    raise SystemExit(NO_WHISPER)
+    raise SystemExit(_no_whisper())
 
 
 # ---------- images ----------
@@ -170,10 +188,30 @@ def distance(a: list[float], b: list[float]) -> float:
     return sum(abs(x - y) for x, y in zip(a, b)) / len(a)
 
 
+def has_video(recording: Path) -> bool:
+    """Return whether the recording has a real video stream.
+
+    `V` (capital) leaves out attached pictures, such as the cover art of an MP3.
+    """
+    out = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "V", "-show_entries", "stream=index",
+                          "-of", "csv=p=0", str(recording)], capture_output=True, text=True, check=True)
+    return bool(out.stdout.strip())
+
+
+def duration(recording: Path) -> float:
+    """Return the recording's length in seconds, or 0 when ffprobe cannot tell."""
+    out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
+                          str(recording)], capture_output=True, text=True, check=True)
+    try:
+        return float(out.stdout.strip())
+    except ValueError:
+        return 0.0
+
+
 def sample_video(recording: Path, crop: str | None) -> list[list[float]]:
     """Return one normalized grayscale sample per second of the recording."""
     filters = ["fps=1"] + ([f"crop={crop}"] if crop else []) + [f"scale={SAMPLE_W}:{SAMPLE_H}", "format=gray"]
-    raw = subprocess.run(["ffmpeg", "-v", "error", "-i", str(recording), "-vf", ",".join(filters),
+    raw = subprocess.run(["ffmpeg", "-v", "error", "-i", str(recording), "-map", "0:V:0", "-vf", ",".join(filters),
                           "-f", "rawvideo", "-"], capture_output=True, check=True).stdout
     size = SAMPLE_W * SAMPLE_H
     return [normalize(raw[i:i + size]) for i in range(0, len(raw) - size + 1, size)]
@@ -273,6 +311,10 @@ def capture_times(samples: list[list[float]], changes: list[int]) -> list[int]:
     start. The end itself can already show the next slide animating in, which the
     change detection counts only once it stays still: a capture must look more
     like its own screen than like the next one.
+
+    Known limit: samples are one second apart, so a flicker shorter than a
+    second (an overlay shown for a fraction of a second) can land exactly on the
+    capture without showing in the samples.
     """
     ends = changes[1:] + [len(samples)]
     times = []
@@ -311,7 +353,7 @@ def save_frames(recording: Path, starts: list[int], seconds: list[int], out_dir:
         name = f"frames/{_clock(start).replace(':', '-')}.png"
         # Sample t is the frame at t s exactly; later can already be the next slide.
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", str(t), "-i", str(recording),
-                        "-frames:v", "1", str(out_dir / name)], check=True)
+                        "-map", "0:V:0", "-frames:v", "1", str(out_dir / name)], check=True)
         paths.append(name)
     return paths
 
@@ -358,29 +400,40 @@ def main() -> int:
     parser.add_argument("--crop", type=crop_box, help="area of the frame that shows the slides or screen, as W:H:X:Y")
     parser.add_argument("--language", help="spoken language for Whisper, for example es or en")
     parser.add_argument("--max-captures-per-hour", type=int, default=CAPTURES_PER_HOUR)
-    parser.add_argument("--preview", action="store_true", help="save one frame at 1:00 and stop")
+    parser.add_argument("--out", type=Path, help="output folder (default: <recording>.prepared next to it)")
+    parser.add_argument("--retranscribe", action="store_true", help="make a new transcript even if one exists")
+    parser.add_argument("--preview", action="store_true", help="save one frame to choose --crop, and stop")
     args = parser.parse_args()
 
     recording = args.recording.resolve()
-    out_dir = recording.with_name(recording.name + ".prepared")
-    out_dir.mkdir(exist_ok=True)
+    if not recording.is_file():
+        raise SystemExit(f"no such recording: {recording}")
+    out_dir = (args.out or recording.with_name(recording.name + ".prepared")).resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    video = has_video(recording)
     if args.preview:
+        if not video:
+            print("audio only: no screen to crop, run without --crop")
+            return 0
         preview = out_dir / "preview.png"
-        subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", "60", "-i", str(recording),
-                        "-frames:v", "1", str(preview)], check=True)
+        # One minute in shows the slides on most recordings; a short one gets its middle.
+        at = min(60.0, duration(recording) / 2)
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", f"{at:.1f}", "-i", str(recording),
+                        "-map", "0:V:0", "-frames:v", "1", str(preview)], check=True)
+        if not preview.exists() or preview.stat().st_size == 0:
+            raise SystemExit(f"ffmpeg saved no frame at {at:.1f} s of {recording.name}")
         print(preview)
         return 0
 
-    transcript, source = transcribe(recording, out_dir, args.language)
+    transcript, source = transcribe(recording, out_dir, args.language, args.retranscribe)
     cues = parse_vtt(transcript.read_text(errors="replace"))
+    if not cues:
+        print(f"warning: {transcript} has no text; check the recording has speech, or --retranscribe",
+              file=sys.stderr)
 
-    has_video = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v", "-show_entries",
-                                "stream=index", "-of", "csv=p=0", str(recording)],
-                               capture_output=True, text=True, check=True).stdout.strip()
-    if not has_video:
-        length = int(cues[-1].end) + 1 if cues else 0
-        segments = [Segment(0, length)]
-    else:
+    length = int(cues[-1].end) + 1 if cues else 0
+    segments: list[Segment] = []
+    if video:
         samples = sample_video(recording, args.crop)
         if args.slides:
             slides = sample_slides(args.slides, out_dir / "slide-samples")
@@ -389,6 +442,8 @@ def main() -> int:
             changes = limit_changes(samples, args.max_captures_per_hour)
             frames = save_frames(recording, changes, capture_times(samples, changes), out_dir)
             segments = change_segments(changes, len(samples), frames)
+    if not segments:  # audio only, or a video too short to sample: keep the whole transcript
+        segments = [Segment(0, length)]
 
     markdown = write_markdown(recording, cues, segments, source, with_slides=bool(args.slides))
     (out_dir / "recording.md").write_text(markdown)

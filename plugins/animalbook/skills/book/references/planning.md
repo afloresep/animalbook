@@ -25,7 +25,7 @@ Ask them in one message, numbered, each with your proposed answer.
    group of them, are they content (a class or talk the book teaches from, so
    what was said can give definitions and numbers) or context (meetings that
    explain decisions)? Propose content for classes and talks, context for
-   meetings. Record the answer in the plan.
+   meetings. Record the answer in `book.json` under `recordings`.
 6. **Look.**
    - Cover layout: `classic` (title in a colored band, animal below), `modern`
      (large sans title on white, animal in the lower half) or `block` (animal on
@@ -71,13 +71,20 @@ missing or not supported.
   "parts": [
     {"title": "Foundations", "status": "planned"}
   ],
-  "last_build": null
+  "last_build": null,
+  "recordings": [
+    {"path": "lectures/", "role": "content"},
+    {"path": "meetings/", "role": "context"}
+  ]
 }
 ```
 
 - `subtitle`, `imprint`, `cover.tagline`, `cover.ribbon` and `cover.image_credit`
   may be empty strings. A ribbon with a line break (`"Working draft\nFall 2026"`)
   prints on two lines.
+- `recordings` is optional; leave it out when the book uses none. Each `path`
+  is a recording or a folder of them, relative to the project; `role` is
+  `content` or `context`.
 - `parts[].status` is `planned` or `written`. Keep the list in book order.
 - `last_build` is `null` until the first build, then
   `{"date": "YYYY-MM-DD", "commit": "<project git commit>"}`.

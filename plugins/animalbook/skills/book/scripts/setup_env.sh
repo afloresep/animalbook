@@ -5,7 +5,8 @@
 #   with lualatex is already installed. A few hundred MB, not the 6 GB of MacTeX.
 # - Poppler and ImageMagick from conda-forge through micromamba, only when they
 #   are missing (with Homebrew, `brew install poppler imagemagick` does the same).
-# For recordings (prepare_recording.py), pick one:
+# For recordings (prepare_recording.py), add one:
+#   --recordings     ffmpeg only, when every recording comes with a .vtt transcript.
 #   --whisper light  ffmpeg, whisper.cpp and a 5-bit copy of Whisper large-v3-turbo
 #                    (about 0.6 GB). Any Mac.
 #   --whisper full   ffmpeg and mlx-whisper with the full large-v3-turbo model (about
@@ -21,19 +22,26 @@ SCRIPTS="$(cd "$(dirname "$0")" && pwd)"
 FULL_MODEL="mlx-community/whisper-large-v3-turbo"
 LIGHT_MODEL_URL="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin"
 LIGHT_MODEL="$ENV_DIR/models/ggml-large-v3-turbo-q5_0.bin"
-USAGE="usage: setup_env.sh [--whisper light|full]"
+USAGE="usage: setup_env.sh [--recordings | --whisper light | --whisper full]"
 
+RECORDINGS=0
 WHISPER=""
-if [ "${1:-}" = "--whisper" ]; then
-  WHISPER="${2:-}"
-  if [ "$WHISPER" != "light" ] && [ "$WHISPER" != "full" ]; then
+case "${1:-}" in
+  "") ;;
+  --recordings) RECORDINGS=1 ;;
+  --whisper)
+    WHISPER="${2:-}"
+    RECORDINGS=1
+    if [ "$WHISPER" != "light" ] && [ "$WHISPER" != "full" ]; then
+      echo "$USAGE" >&2
+      exit 2
+    fi
+    ;;
+  *)
     echo "$USAGE" >&2
     exit 2
-  fi
-elif [ -n "${1:-}" ]; then
-  echo "$USAGE" >&2
-  exit 2
-fi
+    ;;
+esac
 
 if [ "$(uname -s)" != "Darwin" ]; then
   echo "setup_env.sh supports only macOS; on Linux use the apt commands check_deps.py prints" >&2
@@ -60,26 +68,30 @@ if [ -x "$TLMGR" ] || ! has lualatex; then
   # tlmgr refuses to install anything while a newer tlmgr exists.
   "$TLMGR" update --self
   # Every \RequirePackage of tex/animalbook.sty, plus what tcolorbox's skins and breakable load.
-  "$TLMGR" install luatex makeindex fontspec luaotfload titlesec tcolorbox environ trimspaces tikzfill \
+  "$TLMGR" install luatex makeindex fontspec luaotfload geometry titlesec tcolorbox environ trimspaces tikzfill \
     pdfcol enumitem imakeidx pdfpages fancyhdr caption listings booktabs tools microtype \
     etoolbox iftex xcolor pgf amsmath amsfonts hyperref graphics
   "$TLMGR" option sys_bin "$ENV_DIR/bin"
   "$TLMGR" path add
 else
-  echo "== LaTeX: lualatex found, TinyTeX not needed"
+  echo "== LaTeX: lualatex found, TinyTeX not needed (check_deps.py says what that TeX still lacks)"
 fi
 
 # conda-forge packages for whatever is missing. A plain string, not an array:
 # macOS bash 3.2 treats an empty array as unset under `set -u`.
 PKGS=""
-has pdftoppm || PKGS="$PKGS poppler"
+{ has pdftoppm && has pdfinfo; } || PKGS="$PKGS poppler"
 has convert || PKGS="$PKGS imagemagick"
+if [ "$RECORDINGS" = 1 ]; then
+  { has ffmpeg && has ffprobe; } || PKGS="$PKGS ffmpeg"
+fi
 if [ "$WHISPER" = "light" ]; then
-  has ffmpeg || PKGS="$PKGS ffmpeg"
   has whisper-cli || PKGS="$PKGS whisper.cpp"
 fi
 
+# Keep everything micromamba writes, its package cache too, inside ~/.animalbook.
 export MAMBA_ROOT_PREFIX="$ENV_DIR/mamba"
+export CONDA_PKGS_DIRS="$ENV_DIR/mamba/pkgs"
 MAMBA="$ENV_DIR/bin/micromamba"
 get_micromamba() {
   if [ ! -x "$MAMBA" ]; then
@@ -91,9 +103,11 @@ if [ -n "$PKGS" ]; then
   echo "== conda-forge:$PKGS"
   get_micromamba
   # PKGS is unquoted on purpose: it is a space-separated list.
-  if [ -d "$ENV_DIR/conda" ]; then
+  # conda-meta exists only once an env is complete; anything else is a broken earlier try.
+  if [ -d "$ENV_DIR/conda/conda-meta" ]; then
     "$MAMBA" install -y -p "$ENV_DIR/conda" -c conda-forge $PKGS
   else
+    rm -rf "$ENV_DIR/conda"
     "$MAMBA" create -y -p "$ENV_DIR/conda" -c conda-forge $PKGS
   fi
   # The download cache is only needed while installing.
@@ -114,18 +128,16 @@ if [ "$WHISPER" = "light" ] && [ ! -f "$LIGHT_MODEL" ]; then
 fi
 
 if [ "$WHISPER" = "full" ]; then
-  echo "== mlx-whisper and ffmpeg"
+  echo "== mlx-whisper"
   get_micromamba
   # Its own env: mlx publishes wheels for a few Python versions only.
-  if [ ! -d "$ENV_DIR/whisper" ]; then
-    "$MAMBA" create -y -p "$ENV_DIR/whisper" -c conda-forge python=3.12 ffmpeg pip
+  if [ ! -x "$ENV_DIR/whisper/bin/python3" ]; then
+    rm -rf "$ENV_DIR/whisper"
+    "$MAMBA" create -y -p "$ENV_DIR/whisper" -c conda-forge python=3.12 pip
   fi
   "$ENV_DIR/whisper/bin/python3" -m pip install --quiet --upgrade --no-cache-dir mlx-whisper
   "$MAMBA" clean -a -y
   ln -sf "$ENV_DIR/whisper/bin/mlx_whisper" "$ENV_DIR/bin/mlx_whisper"
-  for name in ffmpeg ffprobe; do
-    has "$name" || ln -sf "$ENV_DIR/whisper/bin/$name" "$ENV_DIR/bin/$name"
-  done
   # The model goes inside ~/.animalbook (not ~/.cache) so remove_env.sh removes it
   # too; prepare_recording.py looks for it there.
   HF_HOME="$ENV_DIR/models/hf" "$ENV_DIR/whisper/bin/python3" -c \

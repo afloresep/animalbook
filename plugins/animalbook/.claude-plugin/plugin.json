@@ -1,7 +1,7 @@
 {
   "name": "animalbook",
   "description": "Plan, write, update and build a project book in the style of the classic engraved-animal programming books, with its cover.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": {
     "name": "Alejandro Flores"
   }

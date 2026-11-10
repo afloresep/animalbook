@@ -25,11 +25,16 @@ The work goes in this order. Each step says when to stop for the user.
 python3 <skill>/scripts/check_deps.py
 ```
 
-If it prints `missing` lines (exit code 1), show the user each one with its
-install command and stop until they say it is done. Lines marked `optional`
-(Codex, used only for generated cover animals, and the tools for recordings) do
-not stop the run: mention them and go on. Never install anything yourself and
-never fall back to a simpler layout.
+It prints an install plan: the fewest commands, in the order to run them, each
+with what it installs. When it starts with `missing` (exit code 1), show the
+user those commands as they are and stop until they say it is done, then run
+the check again. The `optional` groups do not stop the run: mention them in one
+line each and go on. Codex is only for generated cover animals; the recording
+tools matter only if the book will use recordings (see step 4). Never install
+anything yourself and never fall back to a simpler layout.
+
+When it starts with `note: ... is not on PATH` (a shell started before the
+setup), start every command of this skill with the `export PATH=...` it prints.
 
 ### On macOS: setup_env.sh
 
@@ -45,20 +50,9 @@ It installs into `~/.animalbook` only what the Mac lacks: TinyTeX with the
 template's LaTeX packages, and Poppler and ImageMagick when Homebrew did not
 provide them. It adds one line to `~/.zshrc` that puts `~/.animalbook/bin` on
 `PATH`, is safe to run again (for example after a failed download) and ends by
-running `check_deps.py`.
-
-Recordings need ffmpeg and a speech-to-text tool, listed as optional. Offer the
-user both sizes and let them pick:
-
-- `setup_env.sh --whisper light`: whisper.cpp and a compressed copy of the
-  Whisper large-v3-turbo model, about 0.6 GB. Any Mac.
-- `setup_env.sh --whisper full`: mlx-whisper and the full model, about 3.3 GB,
-  most of it PyTorch. Apple Silicon only.
-
-When `check_deps.py` says the environment is installed but not on `PATH` (a
-shell started before the setup), start every command of this skill that calls
-`lualatex`, `pdftoppm`, `pdfinfo`, `convert`, `ffmpeg` or a Whisper tool with
-`export PATH="$HOME/.animalbook/bin:$PATH" &&`.
+running `check_deps.py`. Options for recordings are in
+[references/recordings.md](references/recordings.md); offer them only once the
+user says the book will use recordings.
 
 When the user asks how to remove it all, give them
 `bash <skill>/scripts/remove_env.sh`. It deletes `~/.animalbook` (the Whisper

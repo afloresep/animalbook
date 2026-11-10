@@ -54,3 +54,21 @@ def test_non_ascii_names_survive_as_text(tmp_path):
     path = tmp_path / "book.json"
     book_settings.save(dataclasses.replace(SAMPLE, author="Ana Sepúlveda"), path)
     assert "Sepúlveda" in path.read_text(encoding="utf-8")
+
+
+def test_recordings_keep_their_role(tmp_path):
+    groups = [{"path": "classes/", "role": "content"}, {"path": "meetings/", "role": "context"}]
+    path = tmp_path / "book.json"
+    book_settings.save(dataclasses.replace(SAMPLE, recordings=groups), path)
+    assert book_settings.load(path).recordings == groups
+
+
+def test_recording_role_must_be_content_or_context(tmp_path):
+    path = write_json(tmp_path, {**SAMPLE_DICT, "recordings": [{"path": "classes/", "role": "notes"}]})
+    with pytest.raises(book_settings.SettingsError, match=r"recordings\[0\].role.*content, context"):
+        book_settings.load(path)
+
+
+def test_book_without_recordings_still_loads(tmp_path):
+    assert "recordings" not in SAMPLE_DICT
+    assert book_settings.load(write_json(tmp_path, SAMPLE_DICT)).recordings == []
