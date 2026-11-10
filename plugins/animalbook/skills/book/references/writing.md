@@ -25,6 +25,30 @@ Ask the user which of these exist, then read them. Do not assume any of them.
 Before writing a part, list for each chapter the files it draws on. A chapter
 with no sources yet gets a `\todo` box instead of invented content.
 
+## Length
+
+Every chapter has a page budget from the plan. One page holds about 400 words
+with code, tables and callouts, about 490 of plain prose. So a 6-page chapter is
+about 2,400 words, all included. Books run long when every source gets its own
+paragraph; the budget forces a choice.
+
+- **Choose before writing.** Sort the chapter's material into what the reader
+  must know for the book's purpose (goes in), what supports it (goes in if
+  there is room) and detail (goes to an appendix, or becomes one sentence that
+  names the file where it lives).
+- **Say each thing once.** A concept is explained in one chapter; later ones
+  point back to it (`\ref`). A result is either in a table or in the text, not
+  both. A callout never repeats the paragraph next to it.
+- **Short callouts, few of them.** At most one `\keyidea` per section.
+- **Small results stay, but small.** "Report every result" means one line or
+  one table row, not a section.
+- **Do not pad.** Under budget is fine.
+
+After each build, `book_length.py` (SKILL.md, step 5) compares the pages each
+part takes with its budget. A part more than 15% over gets cut before the user
+sees it: repetition first, then detail that can move to an appendix. Tell the
+user what moved.
+
 ## Rules for content
 
 - **Every chapter opens with `\sources{...}`**, saying where its content comes

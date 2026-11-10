@@ -21,6 +21,13 @@ appendix or as a dated callout, as `history` says), and a `\todo` that can now b
 written. Plan changes to the parts or the look go back through the questions in
 [planning.md](planning.md).
 
+Each part keeps its page budget (`parts[].pages` in `book.json`). When the new
+material would push a part more than 15% over, the table says so and proposes
+what to cut or move to an appendix to make room. Raising a budget is the user's
+call: ask, and change `book.json` only when they agree. A book with no
+`target_pages` yet gets the length question from [planning.md](planning.md)
+once, with its current length as the proposal.
+
 Stop until the user agrees. Apply only what they agreed to.
 
 ## 3. Apply, build, record

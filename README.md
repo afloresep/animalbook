@@ -26,6 +26,9 @@ affiliated with any publisher, and no publisher's name or logo appears in them.
   and "in our project" notes.
 - Content rules that keep the book honest: every chapter says where its content
   comes from, numbers come only from files, results carry evidence tags.
+- A length you choose: short (about 40 pages), medium (about 80), long (about
+  150) or any number. Every chapter gets a page budget, and after each build the
+  skill checks the pages and cuts what runs over before showing you.
 - Updates: later runs find what changed since the last build and propose edits
   chapter by chapter.
 - Recordings as sources: a class, talk or meeting on video becomes a transcript

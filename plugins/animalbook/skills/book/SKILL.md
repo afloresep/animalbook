@@ -63,9 +63,10 @@ are, but cannot be built again until the setup runs again.
 
 Follow [references/planning.md](references/planning.md): one round of
 questions, each with your proposed answer, covering the reader, what the book
-should let them do, the parts and chapters, where meeting history goes, and the
-look. Write the answers to `book.json` and show the user the plan as a short
-table of parts and chapters. Stop until they agree.
+should let them do, how long it should be, the parts and chapters with a page
+budget each, where meeting history goes, and the look. Write the answers to
+`book.json` and show the user the plan as a short table of parts and chapters
+with their page budgets. Stop until they agree.
 
 An existing book in another layout (a LaTeX book written before this skill) is
 brought in with the same interview; see "Bring in an existing LaTeX book" in
@@ -128,8 +129,18 @@ pdftoppm -r 70 -png -f <first> -l <last> book.pdf /tmp/<book>-pages/p
 ```
 
 Fix what looks wrong (a table too wide, a callout split badly, a long path
-running into the margin). Then mark the part `written` in `book.json`, show the
-user a few page images, and stop for their check before the next part.
+running into the margin). Then check the length:
+
+```bash
+python3 <skill>/scripts/book_length.py <book_dir>
+```
+
+It prints each part's pages against its budget. When it exits 1, a part or
+the whole book is more than 15% over: cut as "Length" in
+[references/writing.md](references/writing.md) says, rebuild, and check again.
+Then mark the part `written` in `book.json`, show the user a few page images
+and its pages against the budget, and stop for their check before the next
+part.
 
 ## 6. Update an existing book
 
@@ -139,9 +150,9 @@ after the user agrees, rebuild, and record the new `last_build`.
 
 ## 7. Hand over
 
-Tell the user: the PDF path and page count, what changed in this run, any number
-you could not trace to a source file, and what you left out and why. Keep it to a
-few lines.
+Tell the user: the PDF path and page count against the target, what changed in
+this run, any number you could not trace to a source file, and what you left
+out or moved to an appendix to stay within budget. Keep it to a few lines.
 
 ## Always
 

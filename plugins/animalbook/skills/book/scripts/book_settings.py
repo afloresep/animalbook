@@ -108,8 +108,12 @@ class BookSettings:
         callouts: Callout style, one of CALLOUT_STYLES.
         cover: Cover settings.
         history: Where meeting history goes, one of HISTORY.
-        parts: Planned parts, each {"title": ..., "status": "planned" | "written"}.
+        parts: Planned parts, each {"title": ..., "status": "planned" | "written"},
+            with an optional "pages" (the part's page budget) and "chapters"
+            (its chapters in order, each {"title": ..., "pages": ...}).
         last_build: {"date": ..., "commit": ...} of the last build, or None.
+        target_pages: How long the main chapters should be, in pages, or None
+            for no target. Front matter, appendices and the index do not count.
         recordings: Groups of recordings and their role, each
             {"path": <file or folder>, "role": "content" | "context"}. Empty
             when the book uses no recordings.
@@ -127,6 +131,16 @@ class BookSettings:
     parts: list[dict[str, str]] = field(default_factory=list)
     last_build: dict[str, str] | None = None
     recordings: list[dict[str, str]] = field(default_factory=list)
+    target_pages: int | None = None
+
+
+def _pages(value: object, key: str) -> int | None:
+    """Return a page count: a whole number above zero, or None."""
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise SettingsError(f"{key}: got '{value}', expected a whole number of pages above zero")
+    return value
 
 
 def _require(data: dict, key: str, where: str = "") -> object:
@@ -182,6 +196,14 @@ def from_dict(data: dict) -> BookSettings:
         if not isinstance(part, dict) or "title" not in part:
             raise SettingsError(f'parts[{index}]: expected {{"title": ..., "status": ...}}')
         _choice(part.get("status"), PART_STATUS, f"parts[{index}].status")
+        _reject_unknown(part, ("title", "status", "pages", "chapters"), f"parts[{index}].")
+        _pages(part.get("pages"), f"parts[{index}].pages")
+        for number, chapter in enumerate(part.get("chapters", [])):
+            key = f"parts[{index}].chapters[{number}]"
+            if not isinstance(chapter, dict) or "title" not in chapter:
+                raise SettingsError(f'{key}: expected {{"title": ..., "pages": ...}}')
+            _reject_unknown(chapter, ("title", "pages"), f"{key}.")
+            _pages(chapter.get("pages"), f"{key}.pages")
     recordings = list(data.get("recordings", []))
     for index, group in enumerate(recordings):
         if not isinstance(group, dict) or not group.get("path"):
@@ -201,6 +223,7 @@ def from_dict(data: dict) -> BookSettings:
         parts=parts,
         last_build=data.get("last_build"),
         recordings=recordings,
+        target_pages=_pages(data.get("target_pages"), "target_pages"),
     )
 
 
