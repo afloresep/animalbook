@@ -52,24 +52,27 @@ the install command for anything missing. It never installs anything itself.
 
 - LuaLaTeX with `fontspec`, `luaotfload`, `titlesec`, `tcolorbox`, `enumitem`,
   `imakeidx`, `pdfpages`, `listings`, `fancyhdr`, `caption` and TikZ. On
-  Debian or Ubuntu: `sudo apt install texlive-luatex texlive-latex-extra
-  texlive-pictures`.
+  macOS, `setup_env.sh` (below) installs TinyTeX with exactly these, a few
+  hundred MB; you do not need MacTeX. On Debian or Ubuntu: `sudo apt install
+  texlive-luatex texlive-latex-extra texlive-pictures`.
 - Poppler (`pdftoppm`, `pdfinfo`) and ImageMagick (`convert`).
 - Chromium or Google Chrome, to draw the cover.
 - Codex CLI, only for generated cover animals.
-- Python 3.10 or newer. The scripts use the standard library only.
-- ffmpeg and mlx-whisper, optional, only for recordings (Apple Silicon).
+- Python 3.9 or newer, the one macOS ships. The scripts use the standard
+  library only.
+- Optional, only for recordings: ffmpeg and a speech-to-text tool, in one of
+  two sizes. `light` is whisper.cpp with a compressed Whisper model (about
+  0.6 GB, any Mac); `full` is mlx-whisper with the full model (about 3.3 GB,
+  most of it PyTorch, Apple Silicon only).
 
-On macOS with Apple Silicon and no Homebrew or admin rights, one script
-installs all of it except Chrome into `~/.animalbook` (TinyTeX, plus Python,
-Poppler, ImageMagick and pytest from conda-forge through micromamba, about
-850 MB), and adds `~/.animalbook/bin` to `PATH` in `~/.zshrc`. The skill points
-to it on its first run when Homebrew is missing. Add `--video` to also install ffmpeg and
-mlx-whisper with its speech model, for recordings (about 3.3 GB more). To
-remove it all again, run `remove_env.sh`.
+On macOS one script installs what is missing into `~/.animalbook`, with no
+admin rights and no Homebrew needed: TinyTeX, and Poppler and ImageMagick when
+Homebrew did not provide them. It adds `~/.animalbook/bin` to `PATH` in
+`~/.zshrc`. Add `--whisper light` or `--whisper full` for recordings.
+`remove_env.sh` removes it all again.
 
 ```
-bash plugins/animalbook/skills/book/scripts/setup_env.sh
+bash plugins/animalbook/skills/book/scripts/setup_env.sh [--whisper light|full]
 bash plugins/animalbook/skills/book/scripts/remove_env.sh
 ```
 
@@ -94,7 +97,8 @@ the skill changes.
 
 ```
 cd plugins/animalbook
-python3 -m pytest skills/book/tests -q   # Python 3.10+; on macOS ~/.animalbook/conda/bin/python3
+python3 -m pip install --user pytest   # once
+python3 -m pytest skills/book/tests -q
 ```
 
 The build tests need LuaLaTeX and the fonts above.

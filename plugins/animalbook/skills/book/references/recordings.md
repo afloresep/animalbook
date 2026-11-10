@@ -6,8 +6,10 @@ transcript and, where needed, still images. `prepare_recording.py` makes both,
 on this machine. The recording never leaves it; only the text and images you
 read do.
 
-Needs `ffmpeg` and `mlx_whisper` (`setup_env.sh --video`). Run every command
-below with `export PATH="$HOME/.animalbook/bin:$PATH" &&` in front when they
+Needs `ffmpeg`, and a speech-to-text tool unless every recording comes with a
+`.vtt` export: `setup_env.sh --whisper light` (whisper.cpp, about 0.6 GB) or
+`--whisper full` (mlx-whisper, about 3.3 GB, Apple Silicon); when both are
+installed the script uses the full one. Run every command below with `export PATH="$HOME/.animalbook/bin:$PATH" &&` in front when they
 are not on `PATH` yet.
 
 ## 1. Gather what exists for each recording
@@ -30,7 +32,7 @@ slide matches look only at the area that shows the slides or shared screen.
 Save one frame and look at it:
 
 ```bash
-<python> <skill>/scripts/prepare_recording.py <recording> --preview
+python3 <skill>/scripts/prepare_recording.py <recording> --preview
 ```
 
 Read the printed `preview.png`, find the slides or shared screen, and write
@@ -46,13 +48,13 @@ talking) needs no crop: it gets the transcript alone.
 With the slides:
 
 ```bash
-<python> <skill>/scripts/prepare_recording.py <recording> --slides <deck.pdf> --crop W:H:X:Y
+python3 <skill>/scripts/prepare_recording.py <recording> --slides <deck.pdf> --crop W:H:X:Y
 ```
 
 Without them:
 
 ```bash
-<python> <skill>/scripts/prepare_recording.py <recording> --crop W:H:X:Y
+python3 <skill>/scripts/prepare_recording.py <recording> --crop W:H:X:Y
 ```
 
 Transcribing takes a while (minutes per hour of audio): run it in the
@@ -74,8 +76,8 @@ Look at the section list of `recording.md` before writing from it:
 - **Build-up slides** (one bullet more on each page) look almost the same; the
   later page wins a tie, so a few seconds can land on the next page. That is
   harmless for writing.
-- **Whisper mishears names and technical terms.** Check them against the
-  slides or the user's notes before quoting.
+- **Whisper mishears names, technical terms and numbers.** Check them against
+  the slides or the user's notes before quoting.
 
 ## 5. Use it
 

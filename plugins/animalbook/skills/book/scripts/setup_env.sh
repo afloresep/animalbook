@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
-# Install everything the book skill needs into ~/.animalbook, without admin rights:
-# TinyTeX (LuaLaTeX and the template's packages), and Python 3.10+, Poppler,
-# ImageMagick and pytest from conda-forge through micromamba. macOS on Apple Silicon only.
-# With --video it also installs what prepare_recording.py needs: ffmpeg and
-# mlx-whisper with its speech model (about 3.3 GB more: 1.8 GB of tools, most of
-# it PyTorch, which mlx-whisper requires, and 1.5 GB of model).
+# Install what the book skill needs and this Mac lacks into ~/.animalbook, with no
+# admin rights:
+# - LaTeX: TinyTeX with the packages of tex/animalbook.sty, unless another TeX
+#   with lualatex is already installed. A few hundred MB, not the 6 GB of MacTeX.
+# - Poppler and ImageMagick from conda-forge through micromamba, only when they
+#   are missing (with Homebrew, `brew install poppler imagemagick` does the same).
+# For recordings (prepare_recording.py), pick one:
+#   --whisper light  ffmpeg, whisper.cpp and a 5-bit copy of Whisper large-v3-turbo
+#                    (about 0.6 GB). Any Mac.
+#   --whisper full   ffmpeg and mlx-whisper with the full large-v3-turbo model (about
+#                    3.3 GB, most of it PyTorch, which mlx-whisper requires). Apple
+#                    Silicon only.
 # Safe to run again. Undo everything with remove_env.sh.
 set -euo pipefail
 
@@ -12,65 +18,118 @@ ENV_DIR="$HOME/.animalbook"
 TINYTEX_VERSION="v2026.11"
 MARKER="# added by animalbook setup_env.sh"
 SCRIPTS="$(cd "$(dirname "$0")" && pwd)"
-WHISPER_MODEL="mlx-community/whisper-large-v3-turbo"
-VIDEO=0
-[ "${1:-}" = "--video" ] && VIDEO=1
+FULL_MODEL="mlx-community/whisper-large-v3-turbo"
+LIGHT_MODEL_URL="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin"
+LIGHT_MODEL="$ENV_DIR/models/ggml-large-v3-turbo-q5_0.bin"
+USAGE="usage: setup_env.sh [--whisper light|full]"
 
-if [ "$(uname -s)-$(uname -m)" != "Darwin-arm64" ]; then
-  echo "setup_env.sh supports only macOS on Apple Silicon" >&2
+WHISPER=""
+if [ "${1:-}" = "--whisper" ]; then
+  WHISPER="${2:-}"
+  if [ "$WHISPER" != "light" ] && [ "$WHISPER" != "full" ]; then
+    echo "$USAGE" >&2
+    exit 2
+  fi
+elif [ -n "${1:-}" ]; then
+  echo "$USAGE" >&2
+  exit 2
+fi
+
+if [ "$(uname -s)" != "Darwin" ]; then
+  echo "setup_env.sh supports only macOS; on Linux use the apt commands check_deps.py prints" >&2
   exit 1
 fi
+case "$(uname -m)" in
+  arm64) PLATFORM="osx-arm64" ;;
+  *) PLATFORM="osx-64" ;;
+esac
+if [ "$WHISPER" = "full" ] && [ "$PLATFORM" != "osx-arm64" ]; then
+  echo "--whisper full needs Apple Silicon; use --whisper light" >&2
+  exit 1
+fi
+has() { command -v "$1" >/dev/null 2>&1; }
 mkdir -p "$ENV_DIR/bin"
 
-echo "== LaTeX (TinyTeX $TINYTEX_VERSION)"
 TLMGR="$ENV_DIR/TinyTeX/bin/universal-darwin/tlmgr"
-if [ ! -x "$TLMGR" ]; then
-  curl -fsSL "https://github.com/rstudio/tinytex-releases/releases/download/$TINYTEX_VERSION/TinyTeX-1-darwin-$TINYTEX_VERSION.tar.xz" \
-    | tar -xJ -C "$ENV_DIR"
+if [ -x "$TLMGR" ] || ! has lualatex; then
+  echo "== LaTeX (TinyTeX $TINYTEX_VERSION)"
+  if [ ! -x "$TLMGR" ]; then
+    curl -fsSL "https://github.com/rstudio/tinytex-releases/releases/download/$TINYTEX_VERSION/TinyTeX-1-darwin-$TINYTEX_VERSION.tar.xz" \
+      | tar -xJ -C "$ENV_DIR"
+  fi
+  # tlmgr refuses to install anything while a newer tlmgr exists.
+  "$TLMGR" update --self
+  # Every \RequirePackage of tex/animalbook.sty, plus what tcolorbox's skins and breakable load.
+  "$TLMGR" install luatex makeindex fontspec luaotfload titlesec tcolorbox environ trimspaces tikzfill \
+    pdfcol enumitem imakeidx pdfpages fancyhdr caption listings booktabs tools microtype \
+    etoolbox iftex xcolor pgf amsmath amsfonts hyperref graphics
+  "$TLMGR" option sys_bin "$ENV_DIR/bin"
+  "$TLMGR" path add
+else
+  echo "== LaTeX: lualatex found, TinyTeX not needed"
 fi
-# tlmgr refuses to install anything while a newer tlmgr exists.
-"$TLMGR" update --self
-# Every \RequirePackage of tex/animalbook.sty, plus what tcolorbox's skins and breakable load.
-"$TLMGR" install luatex makeindex fontspec luaotfload titlesec tcolorbox environ trimspaces tikzfill \
-  pdfcol enumitem imakeidx pdfpages fancyhdr caption listings booktabs tools microtype \
-  etoolbox iftex xcolor pgf amsmath amsfonts hyperref graphics
-"$TLMGR" option sys_bin "$ENV_DIR/bin"
-"$TLMGR" path add
 
-echo "== Python, Poppler, ImageMagick and pytest (micromamba)"
+# conda-forge packages for whatever is missing. A plain string, not an array:
+# macOS bash 3.2 treats an empty array as unset under `set -u`.
+PKGS=""
+has pdftoppm || PKGS="$PKGS poppler"
+has convert || PKGS="$PKGS imagemagick"
+if [ "$WHISPER" = "light" ]; then
+  has ffmpeg || PKGS="$PKGS ffmpeg"
+  has whisper-cli || PKGS="$PKGS whisper.cpp"
+fi
+
 export MAMBA_ROOT_PREFIX="$ENV_DIR/mamba"
 MAMBA="$ENV_DIR/bin/micromamba"
-if [ ! -x "$MAMBA" ]; then
-  curl -fsSL https://micro.mamba.pm/api/micromamba/osx-arm64/latest | tar -xj -C "$ENV_DIR" bin/micromamba
-fi
-if [ -d "$ENV_DIR/conda" ]; then
-  "$MAMBA" install -y -p "$ENV_DIR/conda" -c conda-forge "python>=3.10" poppler imagemagick pytest
-else
-  "$MAMBA" create -y -p "$ENV_DIR/conda" -c conda-forge "python>=3.10" poppler imagemagick pytest
-fi
-# The download cache is only needed while installing.
-"$MAMBA" clean -a -y
-# Link only the commands the skill calls, so nothing else of the conda env lands on PATH.
-for name in pdftoppm pdfinfo pdftotext pytest; do
-  ln -sf "$ENV_DIR/conda/bin/$name" "$ENV_DIR/bin/$name"
-done
-# ImageMagick 7 answers to `convert` when called by that name.
-ln -sf "$ENV_DIR/conda/bin/magick" "$ENV_DIR/bin/convert"
+get_micromamba() {
+  if [ ! -x "$MAMBA" ]; then
+    curl -fsSL "https://micro.mamba.pm/api/micromamba/$PLATFORM/latest" | tar -xj -C "$ENV_DIR" bin/micromamba
+  fi
+}
 
-if [ "$VIDEO" = 1 ]; then
-  echo "== Video: ffmpeg and mlx-whisper"
+if [ -n "$PKGS" ]; then
+  echo "== conda-forge:$PKGS"
+  get_micromamba
+  # PKGS is unquoted on purpose: it is a space-separated list.
+  if [ -d "$ENV_DIR/conda" ]; then
+    "$MAMBA" install -y -p "$ENV_DIR/conda" -c conda-forge $PKGS
+  else
+    "$MAMBA" create -y -p "$ENV_DIR/conda" -c conda-forge $PKGS
+  fi
+  # The download cache is only needed while installing.
+  "$MAMBA" clean -a -y
+  # Link only the commands the skill calls, so nothing else of the env lands on PATH.
+  for name in pdftoppm pdfinfo pdftotext ffmpeg ffprobe whisper-cli; do
+    if [ -x "$ENV_DIR/conda/bin/$name" ]; then ln -sf "$ENV_DIR/conda/bin/$name" "$ENV_DIR/bin/$name"; fi
+  done
+  # ImageMagick 7 answers to `convert` when called by that name.
+  if [ -x "$ENV_DIR/conda/bin/magick" ]; then ln -sf "$ENV_DIR/conda/bin/magick" "$ENV_DIR/bin/convert"; fi
+fi
+
+if [ "$WHISPER" = "light" ] && [ ! -f "$LIGHT_MODEL" ]; then
+  echo "== Whisper model for whisper.cpp (about 0.6 GB)"
+  mkdir -p "$(dirname "$LIGHT_MODEL")"
+  curl -fL --progress-bar -o "$LIGHT_MODEL.part" "$LIGHT_MODEL_URL"
+  mv "$LIGHT_MODEL.part" "$LIGHT_MODEL"
+fi
+
+if [ "$WHISPER" = "full" ]; then
+  echo "== mlx-whisper and ffmpeg"
+  get_micromamba
   # Its own env: mlx publishes wheels for a few Python versions only.
   if [ ! -d "$ENV_DIR/whisper" ]; then
     "$MAMBA" create -y -p "$ENV_DIR/whisper" -c conda-forge python=3.12 ffmpeg pip
   fi
   "$ENV_DIR/whisper/bin/python3" -m pip install --quiet --upgrade --no-cache-dir mlx-whisper
   "$MAMBA" clean -a -y
-  for name in ffmpeg ffprobe mlx_whisper; do
-    ln -sf "$ENV_DIR/whisper/bin/$name" "$ENV_DIR/bin/$name"
+  ln -sf "$ENV_DIR/whisper/bin/mlx_whisper" "$ENV_DIR/bin/mlx_whisper"
+  for name in ffmpeg ffprobe; do
+    has "$name" || ln -sf "$ENV_DIR/whisper/bin/$name" "$ENV_DIR/bin/$name"
   done
-  # The model goes inside the env (not ~/.cache) so remove_env.sh removes it too.
-  HF_HOME="$ENV_DIR/models" "$ENV_DIR/whisper/bin/python3" -c \
-    "from huggingface_hub import snapshot_download; snapshot_download('$WHISPER_MODEL')"
+  # The model goes inside ~/.animalbook (not ~/.cache) so remove_env.sh removes it
+  # too; prepare_recording.py looks for it there.
+  HF_HOME="$ENV_DIR/models/hf" "$ENV_DIR/whisper/bin/python3" -c \
+    "from huggingface_hub import snapshot_download; snapshot_download('$FULL_MODEL')"
 fi
 
 echo "== PATH"
@@ -79,4 +138,4 @@ if ! grep -qF "$MARKER" "$HOME/.zshrc" 2>/dev/null; then
   echo "added $ENV_DIR/bin to PATH in ~/.zshrc (open a new terminal)"
 fi
 
-PATH="$ENV_DIR/bin:$PATH" "$ENV_DIR/conda/bin/python3" "$SCRIPTS/check_deps.py"
+PATH="$ENV_DIR/bin:$PATH" python3 "$SCRIPTS/check_deps.py"

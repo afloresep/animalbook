@@ -3,10 +3,11 @@
 Prints one line per missing item with the command that installs it. Exits 1 when
 something the book or the cover needs is missing, and 0 when nothing is missing
 or only optional items are (Codex, needed only for generated cover animals, and
-ffmpeg and mlx-whisper, needed only for recordings). It
-never installs anything itself: the user runs the printed commands. On macOS
-without Homebrew the command is setup_env.sh, which installs everything into
-~/.animalbook with no admin rights.
+ffmpeg and Whisper, needed only for recordings). It never installs anything
+itself: the user runs the printed commands. On macOS, LaTeX always comes from
+setup_env.sh (TinyTeX in ~/.animalbook, no admin rights, a few hundred MB
+instead of the 6 GB of MacTeX), and so does everything else when Homebrew is
+missing.
 
 Usage:
     python3 check_deps.py
@@ -30,29 +31,29 @@ OPTIONAL = (GENERATED, RECORDINGS)
 ENV_BIN = Path.home() / ".animalbook" / "bin"
 SETUP = f"bash {Path(__file__).resolve().with_name('setup_env.sh')}"
 
-# command -> (needed for, apt package, brew command)
+# command -> (needed for, apt package, macOS command)
 COMMANDS: dict[str, tuple[str, str, str]] = {
-    "lualatex": (BOOK, "texlive-luatex", "brew install --cask mactex-no-gui"),
-    "makeindex": (BOOK, "texlive-binaries", "brew install --cask mactex-no-gui"),
+    "lualatex": (BOOK, "texlive-luatex", SETUP),
+    "makeindex": (BOOK, "texlive-binaries", SETUP),
     "pdftoppm": (BOOK, "poppler-utils", "brew install poppler"),
     "pdfinfo": (BOOK, "poppler-utils", "brew install poppler"),
     "convert": (COVER, "imagemagick", "brew install imagemagick"),
     "chromium": (COVER, "chromium", "brew install --cask chromium"),
     "codex": (GENERATED, "", "npm install -g @openai/codex"),
     "ffmpeg": (RECORDINGS, "ffmpeg", "brew install ffmpeg"),
-    "mlx_whisper": (RECORDINGS, "", "python3 -m pip install mlx-whisper"),
+    # Speech to text: whisper-cli (whisper.cpp, light) or mlx_whisper (full) counts.
+    "whisper": (RECORDINGS, "", f"{SETUP} --whisper light (about 0.6 GB) or --whisper full (about 3.3 GB)"),
 }
+WHISPER_NAMES = ("whisper-cli", "mlx_whisper")
+LINUX_WHISPER = "conda install -c conda-forge whisper.cpp, and the model as in setup_env.sh --whisper light"
 
 # On macOS without Homebrew (often without admin rights too): command -> what to run instead.
 WITHOUT_BREW: dict[str, str] = {
-    "lualatex": SETUP,
-    "makeindex": SETUP,
     "pdftoppm": SETUP,
     "pdfinfo": SETUP,
     "convert": SETUP,
     "chromium": "install Google Chrome",
-    "ffmpeg": f"{SETUP} --video",
-    "mlx_whisper": f"{SETUP} --video",
+    "ffmpeg": f"{SETUP} --whisper light",
 }
 
 # LaTeX package -> Debian/Ubuntu package that ships it
@@ -130,30 +131,32 @@ def _has_command(name: str, platform: str) -> bool:
         if any(shutil.which(candidate) for candidate in CHROMIUM_NAMES):
             return True
         return platform == "darwin" and MAC_CHROME.exists()
+    if name == "whisper":
+        return any(shutil.which(candidate) for candidate in WHISPER_NAMES)
     return shutil.which(name) is not None
 
 
 def _command_hint(name: str, platform: str) -> str:
     """Return the install command for a missing command on this platform."""
-    _, apt_package, brew = COMMANDS[name]
-    if platform == "darwin" and shutil.which("brew") is None and name in WITHOUT_BREW:
-        return WITHOUT_BREW[name]
-    if platform == "darwin" or not apt_package:
-        return brew
-    return f"sudo apt install {apt_package}"
+    _, apt_package, mac = COMMANDS[name]
+    if platform == "darwin":
+        if shutil.which("brew") is None and name in WITHOUT_BREW:
+            return WITHOUT_BREW[name]
+        return mac
+    if name == "whisper":
+        return LINUX_WHISPER
+    return f"sudo apt install {apt_package}" if apt_package else mac
 
 
 def _latex_hint_darwin(name: str) -> str:
     """Return the macOS install command for a missing LaTeX package.
 
-    tlmgr comes with MacTeX and with setup_env.sh's TinyTeX, and installs a
-    package into either; without any TeX, Homebrew installs MacTeX, and
-    without Homebrew setup_env.sh installs TinyTeX.
+    tlmgr comes with every TeX distribution, including setup_env.sh's TinyTeX,
+    and installs a package into it; without any TeX, setup_env.sh installs
+    TinyTeX with every package the template needs.
     """
     if shutil.which("tlmgr"):
         return f"tlmgr install {name}"
-    if shutil.which("brew"):
-        return "brew install --cask mactex-no-gui"
     return SETUP
 
 
@@ -161,8 +164,9 @@ def check(platform: str) -> list[Missing]:
     """List every missing dependency.
 
     Args:
-        platform: `sys.platform` value; "darwin" gets Homebrew and tlmgr hints,
-            or setup_env.sh without Homebrew; anything else gets apt hints.
+        platform: `sys.platform` value; "darwin" gets setup_env.sh for LaTeX and
+            Homebrew hints for the rest (setup_env.sh without Homebrew);
+            anything else gets apt hints.
 
     Returns:
         The missing items, commands first, in a fixed order. Empty when
@@ -186,14 +190,6 @@ def check(platform: str) -> list[Missing]:
 
 def main() -> int:
     """Print the missing dependencies and return the exit code."""
-    if sys.version_info < (3, 10):
-        python = ENV_BIN.parent / "conda" / "bin" / "python3"
-        if python.exists():
-            hint = str(python)
-        else:
-            hint = "brew install python" if shutil.which("brew") else SETUP
-        print(f"missing python 3.10 or newer (this is {sys.version.split()[0]}): {hint}")
-        return 1
     if ENV_BIN.is_dir() and str(ENV_BIN) not in os.environ.get("PATH", "").split(os.pathsep):
         print(f'environment installed but not on PATH: export PATH="{ENV_BIN}:$PATH"')
         return 1

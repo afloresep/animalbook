@@ -68,12 +68,23 @@ def test_environment_off_path_is_reported(monkeypatch, tmp_path, capsys):
     assert str(tmp_path) in capsys.readouterr().out
 
 
-def test_video_tools_are_optional(monkeypatch, capsys):
+def test_video_tools_are_optional(monkeypatch, capsys, tmp_path):
+    monkeypatch.setattr(check_deps, "ENV_BIN", tmp_path / "absent")
     monkeypatch.setattr(check_deps.shutil, "which",
-                        lambda name: None if name in ("codex", "ffmpeg", "mlx_whisper") else "/usr/bin/x")
+                        lambda name: None if name in ("codex", "ffmpeg", *check_deps.WHISPER_NAMES) else "/usr/bin/x")
     monkeypatch.setattr(check_deps, "has_latex_package", lambda name: True)
     assert check_deps.main() == 0
-    assert "optional: ffmpeg" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "optional: ffmpeg" in out
+    assert "--whisper light" in out and "--whisper full" in out
+
+
+def test_either_whisper_counts(monkeypatch):
+    for present in check_deps.WHISPER_NAMES:
+        monkeypatch.setattr(check_deps.shutil, "which",
+                            lambda name, p=present: None if name in check_deps.WHISPER_NAMES and name != p else "/x")
+        monkeypatch.setattr(check_deps, "has_latex_package", lambda name: True)
+        assert check_deps.check("darwin") == []
 
 
 def test_macos_without_homebrew_points_to_setup_env(monkeypatch):
@@ -84,8 +95,10 @@ def test_macos_without_homebrew_points_to_setup_env(monkeypatch):
     assert "setup_env.sh" in hints["lualatex"] and "setup_env.sh" in hints["titlesec"]
 
 
-def test_macos_with_homebrew_keeps_homebrew_hints(monkeypatch):
-    monkeypatch.setattr(check_deps.shutil, "which", lambda name: None if name in ("pdftoppm", "tlmgr") else "/usr/bin/x")
+def test_macos_with_homebrew_gets_tinytex_not_mactex(monkeypatch):
+    absent = {"pdftoppm", "tlmgr", "lualatex"}
+    monkeypatch.setattr(check_deps.shutil, "which", lambda name: None if name in absent else "/usr/bin/x")
     monkeypatch.setattr(check_deps, "has_latex_package", lambda name: name != "titlesec")
     hints = {m.name: m.install for m in check_deps.check("darwin")}
-    assert hints == {"pdftoppm": "brew install poppler", "titlesec": "brew install --cask mactex-no-gui"}
+    assert hints == {"lualatex": check_deps.SETUP, "pdftoppm": "brew install poppler", "titlesec": check_deps.SETUP}
+    assert not any("mactex" in hint for hint in hints.values())

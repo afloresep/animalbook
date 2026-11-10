@@ -11,11 +11,9 @@ serif text with condensed sans headings, and colored callouts that say what to
 remember and what to be careful about. The book is written from the project's own
 sources and grows with it.
 
-`<skill>` below means the folder this file is in. The scripts are stdlib
-Python and need Python 3.10 or newer. `<python>` below means
-`~/.animalbook/conda/bin/python3` when that file exists (the environment's
-Python; the system `python3` of macOS is 3.9 and cannot run them), and
-`python3` otherwise. A book lives in its own folder inside the project
+`<skill>` below means the folder this file is in. Scripts are stdlib Python
+(3.9 or newer, so the `python3` macOS ships works): run them with `python3`.
+A book lives in its own folder inside the project
 (for example `docs/book/`), holding `book.tex`, `book.json`, `chapters/`,
 `figures/`, `cover/` and `style/`.
 
@@ -24,7 +22,7 @@ The work goes in this order. Each step says when to stop for the user.
 ## 0. First run on a machine: dependencies
 
 ```bash
-<python> <skill>/scripts/check_deps.py
+python3 <skill>/scripts/check_deps.py
 ```
 
 If it prints `missing` lines (exit code 1), show the user each one with its
@@ -33,43 +31,39 @@ install command and stop until they say it is done. Lines marked `optional`
 not stop the run: mention them and go on. Never install anything yourself and
 never fall back to a simpler layout.
 
-### Without Homebrew or admin rights (macOS on Apple Silicon)
+### On macOS: setup_env.sh
 
-On macOS with Homebrew the install commands are Homebrew's. Without it, every
-missing item points instead to one script, which the user runs, that installs
-everything into `~/.animalbook` with no admin rights: TinyTeX with the
-template's LaTeX packages, and Python, Poppler, ImageMagick and pytest from
-conda-forge through micromamba. It downloads about 70 MB for TinyTeX plus the conda packages,
-and adds one line to `~/.zshrc` that puts `~/.animalbook/bin` on `PATH`.
+On macOS, LaTeX comes from TinyTeX, a small TeX distribution that installs in
+the home folder with no admin rights (a few hundred MB, where MacTeX is about
+6 GB). `check_deps.py` points to one script for it, which the user runs:
 
 ```bash
 bash <skill>/scripts/setup_env.sh
 ```
 
-It takes a few minutes, is safe to run again (for example after a failed
-download) and ends by running `check_deps.py`. Recordings need two more tools,
-ffmpeg and mlx-whisper with its speech model (about 3.3 GB more; the base
-environment is about 850 MB): `check_deps.py` lists them as optional, and
-`setup_env.sh --video` installs them.
+It installs into `~/.animalbook` only what the Mac lacks: TinyTeX with the
+template's LaTeX packages, and Poppler and ImageMagick when Homebrew did not
+provide them. It adds one line to `~/.zshrc` that puts `~/.animalbook/bin` on
+`PATH`, is safe to run again (for example after a failed download) and ends by
+running `check_deps.py`.
 
-When `check_deps.py` says Python is too old, run it again with the
-environment's Python. When it says the environment is installed but not on `PATH` (a
+Recordings need ffmpeg and a speech-to-text tool, listed as optional. Offer the
+user both sizes and let them pick:
+
+- `setup_env.sh --whisper light`: whisper.cpp and a compressed copy of the
+  Whisper large-v3-turbo model, about 0.6 GB. Any Mac.
+- `setup_env.sh --whisper full`: mlx-whisper and the full model, about 3.3 GB,
+  most of it PyTorch. Apple Silicon only.
+
+When `check_deps.py` says the environment is installed but not on `PATH` (a
 shell started before the setup), start every command of this skill that calls
-`lualatex`, `pdftoppm`, `pdfinfo`, `convert` or `pytest` with
+`lualatex`, `pdftoppm`, `pdfinfo`, `convert`, `ffmpeg` or a Whisper tool with
 `export PATH="$HOME/.animalbook/bin:$PATH" &&`.
 
-### Removing the environment
-
-When the user asks how to remove it, give them this command:
-
-```bash
-bash <skill>/scripts/remove_env.sh
-```
-
-This deletes `~/.animalbook` (the video tools and the speech model too) and its
-line in `~/.zshrc`. Books already written
-stay where they are, but they cannot be built again until the environment is set
-up again.
+When the user asks how to remove it all, give them
+`bash <skill>/scripts/remove_env.sh`. It deletes `~/.animalbook` (the Whisper
+models too) and its line in `~/.zshrc`. Books already written stay where they
+are, but cannot be built again until the setup runs again.
 
 ## 1. Plan a new book
 
@@ -86,7 +80,7 @@ brought in with the same interview; see "Bring in an existing LaTeX book" in
 ## 2. Set up the book folder
 
 ```bash
-<python> <skill>/scripts/setup_book.py <book_dir>
+python3 <skill>/scripts/setup_book.py <book_dir>
 ```
 
 This copies the style, fonts and icons into `<book_dir>/style/` and writes
@@ -102,7 +96,7 @@ Wikimedia Commons first, a Codex engraving when nothing clean is found. Show the
 user the picture and stop until they accept it. Then:
 
 ```bash
-<python> <skill>/scripts/render_cover.py <book_dir>
+python3 <skill>/scripts/render_cover.py <book_dir>
 ```
 
 Look at `cover/cover.png`: the title fits, nothing overlaps, the fonts are the

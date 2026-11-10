@@ -5,6 +5,8 @@ book's look and progress: title, fonts, callout style, cover, where meeting
 history goes, which parts are written, and the last build.
 """
 
+from __future__ import annotations
+
 import json
 import re
 from dataclasses import asdict, dataclass, field, fields

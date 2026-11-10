@@ -36,7 +36,9 @@ with no sources yet gets a `\todo` box instead of invented content.
   the questions people asked. They never give a number. Recordings follow the
   role the user gave them in planning: as context they are meetings; as
   content (a class, a talk) what was said and shown can give definitions,
-  formulas and numbers, cited by recording and time. Keep a list of
+  formulas and numbers, cited by recording and time. A number that was only
+  heard, not shown on a slide, is marked as spoken ("said at 42:15"), because
+  Whisper mishears numbers as easily as names. Keep a list of
   claim -> source path while writing.
 - **Papers** are cited with their arXiv number or address and a section or page.
 - **Results carry an evidence tag**: `\ev{finding}` says something about the
