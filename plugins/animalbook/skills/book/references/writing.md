@@ -11,6 +11,9 @@ Ask the user which of these exist, then read them. Do not assume any of them.
 - **Meetings.** Notes or transcripts through a meeting MCP server when the
   session has one (Granola or another), or a folder of exported transcripts the
   user names. The project's `CLAUDE.md` may name the server and folder.
+- **Recordings.** Video or audio of classes, talks, meetings or demos, read
+  through `recording.md` from `prepare_recording.py` (see
+  [recordings.md](recordings.md)), never by guessing from the file name.
 - **The project's memory.** Claude memories for the project, `CLAUDE.md` and
   its rules. When they name writing, language or privacy rules, follow them;
   they come before the defaults here.
@@ -26,10 +29,14 @@ with no sources yet gets a `\todo` box instead of invented content.
 
 - **Every chapter opens with `\sources{...}`**, saying where its content comes
   from: paths for code and outputs, documents by name, meetings only as "the
-  discussion on <date>".
+  discussion on <date>", recordings by name and time ("recording 2026-11-03,
+  42:15").
 - **Numbers come only from files**: an output, a log, committed code, or a
   document that cites one. Meetings give context, the reasons for decisions and
-  the questions people asked. They never give a number. Keep a list of
+  the questions people asked. They never give a number. Recordings follow the
+  role the user gave them in planning: as context they are meetings; as
+  content (a class, a talk) what was said and shown can give definitions,
+  formulas and numbers, cited by recording and time. Keep a list of
   claim -> source path while writing.
 - **Papers** are cited with their arXiv number or address and a section or page.
 - **Results carry an evidence tag**: `\ev{finding}` says something about the

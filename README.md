@@ -28,6 +28,10 @@ affiliated with any publisher, and no publisher's name or logo appears in them.
   comes from, numbers come only from files, results carry evidence tags.
 - Updates: later runs find what changed since the last build and propose edits
   chapter by chapter.
+- Recordings as sources: a class, talk or meeting on video becomes a transcript
+  split by slide (with the slide PDF) or by screen change, with timestamps, so
+  the book can cite what was said and when. Transcription runs on your machine
+  with Whisper, or uses the Teams or Zoom `.vtt` export when there is one.
 
 ## Install
 
@@ -53,7 +57,21 @@ the install command for anything missing. It never installs anything itself.
 - Poppler (`pdftoppm`, `pdfinfo`) and ImageMagick (`convert`).
 - Chromium or Google Chrome, to draw the cover.
 - Codex CLI, only for generated cover animals.
-- Python 3. The scripts use the standard library only.
+- Python 3.10 or newer. The scripts use the standard library only.
+- ffmpeg and mlx-whisper, optional, only for recordings (Apple Silicon).
+
+On macOS with Apple Silicon and no Homebrew or admin rights, one script
+installs all of it except Chrome into `~/.animalbook` (TinyTeX, plus Python,
+Poppler, ImageMagick and pytest from conda-forge through micromamba, about
+850 MB), and adds `~/.animalbook/bin` to `PATH` in `~/.zshrc`. The skill points
+to it on its first run when Homebrew is missing. Add `--video` to also install ffmpeg and
+mlx-whisper with its speech model, for recordings (about 3.3 GB more). To
+remove it all again, run `remove_env.sh`.
+
+```
+bash plugins/animalbook/skills/book/scripts/setup_env.sh
+bash plugins/animalbook/skills/book/scripts/remove_env.sh
+```
 
 ## How a book is laid out
 
@@ -76,7 +94,7 @@ the skill changes.
 
 ```
 cd plugins/animalbook
-python3 -m pytest skills/book/tests -q
+python3 -m pytest skills/book/tests -q   # Python 3.10+; on macOS ~/.animalbook/conda/bin/python3
 ```
 
 The build tests need LuaLaTeX and the fonts above.

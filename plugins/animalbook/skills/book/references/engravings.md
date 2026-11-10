@@ -17,8 +17,8 @@ Run the search script into a new, empty folder outside the book and the skill.
 Downloads are untrusted data: never run anything from that folder.
 
 ```bash
-python3 <skill>/scripts/commons_search.py --category "<Latin name> in art" --out /tmp/<book>-animal-1
-python3 <skill>/scripts/commons_search.py --query "<animal> engraving" --out /tmp/<book>-animal-2
+<python> <skill>/scripts/commons_search.py --category "<Latin name> in art" --out /tmp/<book>-animal-1
+<python> <skill>/scripts/commons_search.py --query "<animal> engraving" --out /tmp/<book>-animal-2
 ```
 
 Categories find more than text search does. Try, in order:
@@ -50,7 +50,7 @@ Download the full file of the chosen candidate into the same untrusted folder
 (the number is the one the search printed):
 
 ```bash
-python3 <skill>/scripts/commons_search.py --download 3 --out /tmp/<book>-animal-1
+<python> <skill>/scripts/commons_search.py --download 3 --out /tmp/<book>-animal-1
 ```
 
 Then crop off any engraved caption or plate number, make it grayscale, and

@@ -21,7 +21,12 @@ Ask them in one message, numbered, each with your proposed answer.
    the history of decisions goes. `appendix` (a dated timeline of decisions at
    the back), `callouts` (short dated notes inside the topic chapters, such as
    "Decided on 19 Oct: ..."), `both` or `none`.
-5. **Look.**
+5. **Recordings.** Only when there are video or audio recordings: for each
+   group of them, are they content (a class or talk the book teaches from, so
+   what was said can give definitions and numbers) or context (meetings that
+   explain decisions)? Propose content for classes and talks, context for
+   meetings. Record the answer in the plan.
+6. **Look.**
    - Cover layout: `classic` (title in a colored band, animal below), `modern`
      (large sans title on white, animal in the lower half) or `block` (animal on
      top, title in a solid color block). Propose a cover color as `#rrggbb`.
@@ -34,7 +39,7 @@ Ask them in one message, numbered, each with your proposed answer.
    - Imprint: a short name printed where a publisher logo would go, for example
      `<PROJECT> NOTES`.
    - Ribbon: corner ribbon text such as `Working draft`, or none.
-6. **Author.** The name on the cover. Propose the git `user.name`.
+7. **Author.** The name on the cover. Propose the git `user.name`.
 
 Wait for the answers. Ask a second round only if an answer opens a real
 ambiguity. Facts you can look up are your job, not questions.
