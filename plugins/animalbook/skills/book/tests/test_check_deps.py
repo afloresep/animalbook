@@ -59,3 +59,33 @@ def test_google_chrome_counts_as_chromium(monkeypatch):
                         lambda name: "/usr/bin/x" if name in present or name not in check_deps.CHROMIUM_NAMES else None)
     monkeypatch.setattr(check_deps, "has_latex_package", lambda name: True)
     assert check_deps.check("linux") == []
+
+
+def test_environment_off_path_is_reported(monkeypatch, tmp_path, capsys):
+    monkeypatch.setattr(check_deps, "ENV_BIN", tmp_path)
+    monkeypatch.setenv("PATH", "/usr/bin")
+    assert check_deps.main() == 1
+    assert str(tmp_path) in capsys.readouterr().out
+
+
+def test_video_tools_are_optional(monkeypatch, capsys):
+    monkeypatch.setattr(check_deps.shutil, "which",
+                        lambda name: None if name in ("codex", "ffmpeg", "mlx_whisper") else "/usr/bin/x")
+    monkeypatch.setattr(check_deps, "has_latex_package", lambda name: True)
+    assert check_deps.main() == 0
+    assert "optional: ffmpeg" in capsys.readouterr().out
+
+
+def test_macos_without_homebrew_points_to_setup_env(monkeypatch):
+    absent = {"brew", "tlmgr", "lualatex"}
+    monkeypatch.setattr(check_deps.shutil, "which", lambda name: None if name in absent else "/usr/bin/x")
+    monkeypatch.setattr(check_deps, "has_latex_package", lambda name: name != "titlesec")
+    hints = {m.name: m.install for m in check_deps.check("darwin")}
+    assert "setup_env.sh" in hints["lualatex"] and "setup_env.sh" in hints["titlesec"]
+
+
+def test_macos_with_homebrew_keeps_homebrew_hints(monkeypatch):
+    monkeypatch.setattr(check_deps.shutil, "which", lambda name: None if name in ("pdftoppm", "tlmgr") else "/usr/bin/x")
+    monkeypatch.setattr(check_deps, "has_latex_package", lambda name: name != "titlesec")
+    hints = {m.name: m.install for m in check_deps.check("darwin")}
+    assert hints == {"pdftoppm": "brew install poppler", "titlesec": "brew install --cask mactex-no-gui"}
