@@ -10,8 +10,9 @@ from conftest import SKILL_DIR
 @pytest.fixture(autouse=True)
 def tex_files_present(monkeypatch, tmp_path):
     monkeypatch.setattr(check_deps, "has_tex_file", lambda name: True)
-    # Never read this machine's ~/.animalbook.
+    # Never read this machine's ~/.animalbook; whisper-cli counts only with its model.
     monkeypatch.setattr(check_deps, "ENV_BIN", tmp_path / "no-env" / "bin")
+    monkeypatch.setattr(check_deps, "WHISPER_MODEL", SKILL_DIR / "SKILL.md")
 
 
 def test_reports_missing_command_with_install_hint(monkeypatch):
@@ -82,24 +83,21 @@ def test_environment_off_path_is_noted_and_checked(monkeypatch, tmp_path, capsys
 
 def test_video_tools_are_optional(monkeypatch, capsys):
     monkeypatch.setattr(check_deps.sys, "platform", "darwin")
-    absent = {"codex", "ffmpeg", "ffprobe", *check_deps.WHISPER_NAMES}
+    absent = {"codex", "ffmpeg", "ffprobe", "whisper-cli"}
     monkeypatch.setattr(check_deps.shutil, "which", lambda name: None if name in absent else "/usr/bin/x")
     monkeypatch.setattr(check_deps, "has_latex_package", lambda name: True)
     assert check_deps.main() == 0
     out = capsys.readouterr().out
     assert "optional, only for recordings:" in out and "brew install ffmpeg" in out
-    assert "--whisper light" in out
+    assert "--whisper" in out
 
 
-def test_either_whisper_counts_but_whisper_cpp_needs_its_model(monkeypatch, tmp_path):
+def test_whisper_cpp_needs_its_model(monkeypatch, tmp_path):
     monkeypatch.setattr(check_deps, "has_latex_package", lambda name: True)
     model = tmp_path / "model.bin"
-    monkeypatch.setattr(check_deps, "LIGHT_MODEL", model)
-    for present in check_deps.WHISPER_NAMES:
-        monkeypatch.setattr(check_deps.shutil, "which",
-                            lambda name, p=present: None if name in check_deps.WHISPER_NAMES and name != p else "/x")
-        missing = [m.name for m in check_deps.check("darwin")]
-        assert missing == (["whisper"] if present == "whisper-cli" else [])
+    monkeypatch.setattr(check_deps, "WHISPER_MODEL", model)
+    monkeypatch.setattr(check_deps.shutil, "which", lambda name: "/x")
+    assert [m.name for m in check_deps.check("darwin")] == ["whisper"]
     model.write_bytes(b"")
     assert check_deps.check("darwin") == []
 

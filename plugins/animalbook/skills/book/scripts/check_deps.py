@@ -39,9 +39,9 @@ ENV_BIN = ENV_DIR / "bin"
 SETUP = f"bash {shlex.quote(str(Path(__file__).resolve().with_name('setup_env.sh')))}"
 
 # whisper.cpp needs this model file; prepare_recording.py reads it from the same place.
-LIGHT_MODEL = ENV_DIR / "models" / "ggml-large-v3-turbo-q5_0.bin"
-LIGHT_MODEL_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin"
-GET_LIGHT_MODEL = f"curl -L --create-dirs -o {shlex.quote(str(LIGHT_MODEL))} {LIGHT_MODEL_URL}"
+WHISPER_MODEL = ENV_DIR / "models" / "ggml-large-v3-turbo-q5_0.bin"
+WHISPER_MODEL_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin"
+GET_WHISPER_MODEL = f"curl -L --create-dirs -o {shlex.quote(str(WHISPER_MODEL))} {WHISPER_MODEL_URL}"
 
 # command -> (needed for, apt package, macOS command)
 COMMANDS: dict[str, tuple[str, str, str]] = {
@@ -54,11 +54,10 @@ COMMANDS: dict[str, tuple[str, str, str]] = {
     "codex": (GENERATED, "", "npm install -g @openai/codex"),
     "ffmpeg": (RECORDINGS, "ffmpeg", "brew install ffmpeg"),
     "ffprobe": (RECORDINGS, "ffmpeg", "brew install ffmpeg"),
-    # Speech to text: mlx_whisper (full), or whisper-cli (light) with its model file.
-    "whisper": (TRANSCRIBE, "", f"{SETUP} --whisper light"),
+    # Speech to text: whisper.cpp (whisper-cli) with its model file.
+    "whisper": (TRANSCRIBE, "", f"{SETUP} --whisper"),
 }
-WHISPER_NAMES = ("whisper-cli", "mlx_whisper")
-LINUX_WHISPER = f"install whisper.cpp (whisper-cli), then {GET_LIGHT_MODEL}"
+LINUX_WHISPER = f"install whisper.cpp (whisper-cli), then {GET_WHISPER_MODEL}"
 
 # On macOS, a TeX that has tlmgr installs its own missing commands: command -> tlmgr package.
 TEX_COMMANDS = {"lualatex": "luatex", "makeindex": "makeindex"}
@@ -116,7 +115,7 @@ MAC_CHROMES = (Path("/") / _CHROME_APP, Path.home() / _CHROME_APP)
 # setup_env.sh runs last, so it does not install through conda what Homebrew is about to.
 _JOINABLE = ("brew install --cask ", "brew install ", "sudo apt install ", "tlmgr install ", "npm install -g ")
 # setup_env.sh options from least to most: each one installs everything the ones before do.
-_SETUP_LEVELS = ("", " --recordings", " --whisper light")
+_SETUP_LEVELS = ("", " --recordings", " --whisper")
 
 
 @dataclass(frozen=True)
@@ -171,13 +170,13 @@ def find_mac_chrome() -> Path | None:
 
 def _has_command(name: str, platform: str) -> bool:
     """Return whether a command is available, counting Chrome for Chromium on macOS
-    and either Whisper (whisper-cli only with its model)."""
+    and whisper-cli only with its model."""
     if name == "chromium":
         if any(shutil.which(candidate) for candidate in CHROMIUM_NAMES):
             return True
         return platform == "darwin" and find_mac_chrome() is not None
     if name == "whisper":
-        return bool(shutil.which("mlx_whisper")) or (bool(shutil.which("whisper-cli")) and LIGHT_MODEL.exists())
+        return bool(shutil.which("whisper-cli")) and WHISPER_MODEL.exists()
     return shutil.which(name) is not None
 
 
@@ -191,7 +190,7 @@ def _command_hint(name: str, platform: str) -> str:
             return WITHOUT_BREW[name]
         return mac
     if name == "whisper":
-        return GET_LIGHT_MODEL if shutil.which("whisper-cli") else LINUX_WHISPER
+        return GET_WHISPER_MODEL if shutil.which("whisper-cli") else LINUX_WHISPER
     return f"sudo apt install {apt_package}" if apt_package else mac
 
 

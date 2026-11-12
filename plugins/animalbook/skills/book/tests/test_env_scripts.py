@@ -7,7 +7,6 @@ nothing: these tests never download anything.
 import os
 import subprocess
 import sys
-from pathlib import Path
 
 import pytest
 from conftest import SKILL_DIR
@@ -58,18 +57,11 @@ def test_setup_adds_its_path_line_once(home):
     assert (home_dir / ".zshrc").read_text().count(MARKER) == 1
 
 
-@pytest.mark.parametrize("args", [("--video",), ("--whisper",), ("--whisper", "medium")])
+@pytest.mark.parametrize("args", [("--video",), ("--whisper", "light"), ("--recordings", "--whisper")])
 def test_setup_rejects_unknown_options(home, args):
     _, env = home
     result = _run("setup_env.sh", env, *args)
     assert result.returncode == 2 and "usage" in result.stderr
-
-
-def test_whisper_full_needs_apple_silicon(home, tmp_path):
-    _, env = home
-    (tmp_path / "fakebin" / "uname").write_text('#!/bin/sh\ncase "$1" in -s) echo Darwin ;; -m) echo x86_64 ;; esac\n')
-    result = _run("setup_env.sh", env, "--whisper", "full")
-    assert result.returncode == 1 and "--whisper light" in result.stderr
 
 
 def test_remove_keeps_what_is_not_ours(home):

@@ -6,12 +6,9 @@
 # - Poppler and ImageMagick from conda-forge through micromamba, only when they
 #   are missing (with Homebrew, `brew install poppler imagemagick` does the same).
 # For recordings (prepare_recording.py), add one:
-#   --recordings     ffmpeg only, when every recording comes with a .vtt transcript.
-#   --whisper light  ffmpeg, whisper.cpp and a 5-bit copy of Whisper large-v3-turbo
-#                    (about 0.6 GB). Any Mac.
-#   --whisper full   ffmpeg and mlx-whisper with the full large-v3-turbo model (about
-#                    3.3 GB, most of it PyTorch, which mlx-whisper requires). Apple
-#                    Silicon only.
+#   --recordings  ffmpeg only, when every recording comes with a .vtt transcript.
+#   --whisper     ffmpeg, whisper.cpp and a 5-bit copy of Whisper large-v3-turbo
+#                 (about 0.6 GB).
 # Safe to run again. Undo everything with remove_env.sh.
 set -euo pipefail
 
@@ -19,26 +16,17 @@ ENV_DIR="$HOME/.animalbook"
 TINYTEX_VERSION="v2026.11"
 MARKER="# added by animalbook setup_env.sh"
 SCRIPTS="$(cd "$(dirname "$0")" && pwd)"
-FULL_MODEL="mlx-community/whisper-large-v3-turbo"
-LIGHT_MODEL_URL="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin"
-LIGHT_MODEL="$ENV_DIR/models/ggml-large-v3-turbo-q5_0.bin"
-USAGE="usage: setup_env.sh [--recordings | --whisper light | --whisper full]"
+MODEL_URL="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin"
+MODEL="$ENV_DIR/models/ggml-large-v3-turbo-q5_0.bin"
 
 RECORDINGS=0
-WHISPER=""
-case "${1:-}" in
-  "") ;;
-  --recordings) RECORDINGS=1 ;;
-  --whisper)
-    WHISPER="${2:-}"
-    RECORDINGS=1
-    if [ "$WHISPER" != "light" ] && [ "$WHISPER" != "full" ]; then
-      echo "$USAGE" >&2
-      exit 2
-    fi
-    ;;
+WHISPER=0
+case "$#:${1:-}" in
+  0:) ;;
+  1:--recordings) RECORDINGS=1 ;;
+  1:--whisper) RECORDINGS=1 WHISPER=1 ;;
   *)
-    echo "$USAGE" >&2
+    echo "usage: setup_env.sh [--recordings | --whisper]" >&2
     exit 2
     ;;
 esac
@@ -51,10 +39,6 @@ case "$(uname -m)" in
   arm64) PLATFORM="osx-arm64" ;;
   *) PLATFORM="osx-64" ;;
 esac
-if [ "$WHISPER" = "full" ] && [ "$PLATFORM" != "osx-arm64" ]; then
-  echo "--whisper full needs Apple Silicon; use --whisper light" >&2
-  exit 1
-fi
 has() { command -v "$1" >/dev/null 2>&1; }
 mkdir -p "$ENV_DIR/bin"
 
@@ -85,7 +69,7 @@ has convert || PKGS="$PKGS imagemagick"
 if [ "$RECORDINGS" = 1 ]; then
   { has ffmpeg && has ffprobe; } || PKGS="$PKGS ffmpeg"
 fi
-if [ "$WHISPER" = "light" ]; then
+if [ "$WHISPER" = 1 ]; then
   has whisper-cli || PKGS="$PKGS whisper.cpp"
 fi
 
@@ -95,15 +79,12 @@ export CONDA_PKGS_DIRS="$ENV_DIR/mamba/pkgs"
 # micromamba 2 keeps its repodata index in ~/.cache/conda otherwise.
 export XDG_CACHE_HOME="$ENV_DIR/mamba/cache"
 MAMBA="$ENV_DIR/bin/micromamba"
-get_micromamba() {
-  if [ ! -x "$MAMBA" ]; then
-    curl -fsSL "https://micro.mamba.pm/api/micromamba/$PLATFORM/latest" | tar -xj -C "$ENV_DIR" bin/micromamba
-  fi
-}
 
 if [ -n "$PKGS" ]; then
   echo "== conda-forge:$PKGS"
-  get_micromamba
+  if [ ! -x "$MAMBA" ]; then
+    curl -fsSL "https://micro.mamba.pm/api/micromamba/$PLATFORM/latest" | tar -xj -C "$ENV_DIR" bin/micromamba
+  fi
   # PKGS is unquoted on purpose: it is a space-separated list.
   # conda-meta exists only once an env is complete; anything else is a broken earlier try.
   if [ -d "$ENV_DIR/conda/conda-meta" ]; then
@@ -122,28 +103,11 @@ if [ -n "$PKGS" ]; then
   if [ -x "$ENV_DIR/conda/bin/magick" ]; then ln -sf "$ENV_DIR/conda/bin/magick" "$ENV_DIR/bin/convert"; fi
 fi
 
-if [ "$WHISPER" = "light" ] && [ ! -f "$LIGHT_MODEL" ]; then
+if [ "$WHISPER" = 1 ] && [ ! -f "$MODEL" ]; then
   echo "== Whisper model for whisper.cpp (about 0.6 GB)"
-  mkdir -p "$(dirname "$LIGHT_MODEL")"
-  curl -fL --progress-bar -o "$LIGHT_MODEL.part" "$LIGHT_MODEL_URL"
-  mv "$LIGHT_MODEL.part" "$LIGHT_MODEL"
-fi
-
-if [ "$WHISPER" = "full" ]; then
-  echo "== mlx-whisper"
-  get_micromamba
-  # Its own env: mlx publishes wheels for a few Python versions only.
-  if [ ! -x "$ENV_DIR/whisper/bin/python3" ]; then
-    rm -rf "$ENV_DIR/whisper"
-    "$MAMBA" create -y -p "$ENV_DIR/whisper" -c conda-forge python=3.12 pip
-  fi
-  "$ENV_DIR/whisper/bin/python3" -m pip install --quiet --upgrade --no-cache-dir mlx-whisper
-  "$MAMBA" clean -a -y
-  ln -sf "$ENV_DIR/whisper/bin/mlx_whisper" "$ENV_DIR/bin/mlx_whisper"
-  # The model goes inside ~/.animalbook (not ~/.cache) so remove_env.sh removes it
-  # too; prepare_recording.py looks for it there.
-  HF_HOME="$ENV_DIR/models/hf" "$ENV_DIR/whisper/bin/python3" -c \
-    "from huggingface_hub import snapshot_download; snapshot_download('$FULL_MODEL')"
+  mkdir -p "$(dirname "$MODEL")"
+  curl -fL --progress-bar -o "$MODEL.part" "$MODEL_URL"
+  mv "$MODEL.part" "$MODEL"
 fi
 
 echo "== PATH"

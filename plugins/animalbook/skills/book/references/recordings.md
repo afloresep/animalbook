@@ -29,18 +29,10 @@ Run `check_deps.py` and look at its two `optional` recording groups.
 - **ffmpeg** is always needed. On macOS without Homebrew it comes from
   `setup_env.sh --recordings`.
 - **Whisper** (speech to text) is needed only for recordings with no `.vtt`
-  export. If every recording has one, skip it. Otherwise offer the two sizes
-  and let the user pick; recommend light:
-  - `setup_env.sh --whisper light`: whisper.cpp with a compressed copy of the
-    Whisper large-v3-turbo model, about 0.6 GB plus ffmpeg. Any Mac. Accurate
-    enough for classes and talks.
-  - `setup_env.sh --whisper full`: mlx-whisper with the uncompressed model,
-    about 3.3 GB, most of it PyTorch. Apple Silicon only. For a user who
-    wants the uncompressed model and has the space.
-
-  Both options include ffmpeg. When both Whispers are installed, the script
-  uses the full one. On Linux, `check_deps.py` prints how to get whisper.cpp
-  and the model.
+  export. If every recording has one, skip it. Otherwise offer
+  `setup_env.sh --whisper`: ffmpeg and whisper.cpp with a compressed copy of
+  the Whisper large-v3-turbo model, about 0.6 GB plus ffmpeg. On Linux,
+  `check_deps.py` prints how to get whisper.cpp and the model.
 
 Stop until the user has run what they chose and `check_deps.py` no longer
 lists it.

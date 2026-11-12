@@ -5,13 +5,13 @@
   },
   "metadata": {
     "description": "Project books in the style of the classic engraved-animal programming books: plan, write, update and build a book from a project's own sources, with its cover",
-    "version": "0.2.0"
+    "version": "0.3.0"
   },
   "plugins": [
     {
       "name": "animalbook",
       "source": "./plugins/animalbook",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "description": "The book skill: plans, writes, updates and builds a project book with an engraved-animal cover, colored callouts and bundled fonts"
     }
   ]
