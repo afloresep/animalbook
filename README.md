@@ -61,10 +61,8 @@ anything itself.
   library only.
 - Optional: Codex CLI, only for generated cover animals.
 - Optional, only for recordings: ffmpeg, and a speech-to-text tool for
-  recordings that come without a `.vtt` transcript. It comes in two sizes:
-  `light` is whisper.cpp with a compressed Whisper model (about 0.6 GB, any
-  Mac); `full` is mlx-whisper with the full model (about 3.3 GB, most of it
-  PyTorch, Apple Silicon only).
+  recordings that come without a `.vtt` transcript: whisper.cpp with a
+  compressed Whisper large-v3-turbo model (about 0.6 GB).
 
 ### On macOS
 
@@ -79,7 +77,7 @@ bash plugins/animalbook/skills/book/scripts/setup_env.sh
 ```
 
 For recordings, add one option: `--recordings` (ffmpeg only, when every
-recording has a `.vtt`), `--whisper light` or `--whisper full`.
+recording has a `.vtt`) or `--whisper` (ffmpeg and whisper.cpp).
 
 To remove everything it installed:
 

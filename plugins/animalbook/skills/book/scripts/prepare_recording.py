@@ -4,9 +4,8 @@ Writes into `--out` (default: `<recording>.prepared/` next to the recording):
 
 - `transcript.vtt`: the transcript with timestamps. A `.vtt` next to the
   recording with the same name (a Teams or Zoom export) is used as is;
-  otherwise Whisper makes one on this machine: mlx-whisper with the full model
-  when it is installed (`setup_env.sh --whisper full`), else whisper.cpp with a
-  compressed copy of the same model (`setup_env.sh --whisper light`).
+  otherwise whisper.cpp makes one on this machine with a 5-bit copy of Whisper
+  large-v3-turbo (`setup_env.sh --whisper`).
 - `recording.md`: the transcript split into sections. With `--slides`, one
   section per stretch of time a slide of the PDF was on screen ("Slide 7,
   12:30-15:10"). Without it, one section per screen change, each pointing to a
@@ -23,13 +22,12 @@ A transcript from an earlier run is reused; `--retranscribe` makes a new one
 Usage:
     python3 prepare_recording.py <recording> --preview [--out DIR]   # one frame, to choose --crop
     python3 prepare_recording.py <recording> [--out DIR] [--slides deck.pdf] [--crop W:H:X:Y]
-        [--language es] [--retranscribe] [--max-captures-per-hour 240]
+        [--language es] [--retranscribe]
 """
 
 from __future__ import annotations
 
 import argparse
-import math
 import os
 import re
 import shutil
@@ -38,14 +36,8 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from check_deps import GET_LIGHT_MODEL, LIGHT_MODEL
+from check_deps import GET_WHISPER_MODEL, WHISPER_MODEL
 
-ENV_DIR = Path.home() / ".animalbook"
-# Full: mlx-whisper, the model from Hugging Face, kept under HF_CACHE by setup_env.sh.
-WHISPER_MODEL = "mlx-community/whisper-large-v3-turbo"
-HF_CACHE = ENV_DIR / "models" / "hf"
-# Light: whisper.cpp (whisper-cli) and the same model compressed to 5 bits, about
-# 0.6 GB, at LIGHT_MODEL (from check_deps, which checks for it).
 _CROP = re.compile(r"\d+:\d+:\d+:\d+")
 
 # Samples are this small: enough to tell slides apart, cheap to compare in pure Python.
@@ -60,10 +52,6 @@ STILL_SECONDS = 3  # how long a new screen must stay still to count
 MATCH = 0.6  # a sample farther than this from every slide shows no slide
 TIE = 0.05  # slides this close to the best match tie; of consecutive ones the latest wins (builds)
 MIN_SEGMENT = 3  # shorter slide stretches are flicker and join the previous one
-MIN_CAPTURES = 10  # the per-hour limit never cuts a recording below this many
-# A guard for odd videos (endless scrolling), not a budget: a talk or class with a
-# slide every 40 s reaches 90 an hour, and a lower limit drops real slides.
-CAPTURES_PER_HOUR = 240
 
 
 @dataclass(frozen=True)
@@ -124,17 +112,16 @@ def _no_whisper() -> str:
     """Say how to get a transcript on this platform when no Whisper is installed."""
     first = "no speech-to-text tool found. Export the transcript as a .vtt next to the recording, or "
     if sys.platform == "darwin":
-        return first + "run setup_env.sh --whisper light (about 0.6 GB; --whisper full is about 3.3 GB)"
-    return first + f"install whisper.cpp (whisper-cli) and its model: {GET_LIGHT_MODEL}"
+        return first + "run setup_env.sh --whisper (about 0.6 GB)"
+    return first + f"install whisper.cpp (whisper-cli) and its model: {GET_WHISPER_MODEL}"
 
 
 def transcribe(recording: Path, out_dir: Path, language: str | None,
                retranscribe: bool = False) -> tuple[Path, str]:
     """Return the recording's transcript and where it came from, making one if none exists.
 
-    A `.vtt` exported with the recording wins. Otherwise mlx-whisper (full) is
-    used when installed, else whisper.cpp (light). Whisper writes to a
-    `.part` file that becomes `transcript.vtt` only when it finishes, so an
+    A `.vtt` exported with the recording wins. Otherwise whisper.cpp writes to
+    a `-part` file that becomes `transcript.vtt` only when it finishes, so an
     interrupted run never leaves a transcript that looks complete.
     """
     target = out_dir / "transcript.vtt"
@@ -144,35 +131,23 @@ def transcribe(recording: Path, out_dir: Path, language: str | None,
         return target, "exported with the recording"
     if target.exists() and not retranscribe:
         return target, "made with Whisper in an earlier run (--retranscribe makes a new one)"
-    # No dot in the name: mlx-whisper replaces everything after one with ".vtt".
+    if not shutil.which("whisper-cli"):
+        raise SystemExit(_no_whisper())
+    if not WHISPER_MODEL.exists():
+        get = "setup_env.sh --whisper" if sys.platform == "darwin" else GET_WHISPER_MODEL
+        raise SystemExit(f"whisper.cpp has no model at {WHISPER_MODEL}: {get}")
+    # whisper.cpp reads 16 kHz mono WAV only.
+    audio = out_dir / "audio.wav"
     part = out_dir / "transcript-part.vtt"
-    if shutil.which("mlx_whisper"):
-        command = ["mlx_whisper", str(recording), "--model", WHISPER_MODEL, "--output-format", "vtt",
-                   "--output-dir", str(out_dir), "--output-name", part.stem]
-        if language:
-            command += ["--language", language]
-        env = dict(os.environ)
-        if "HF_HOME" not in env and HF_CACHE.is_dir():  # the model setup_env.sh downloaded
-            env["HF_HOME"] = str(HF_CACHE)
-        subprocess.run(command, check=True, env=env)
-        os.replace(part, target)
-        return target, f"made with mlx-whisper ({WHISPER_MODEL})"
-    if shutil.which("whisper-cli"):
-        if not LIGHT_MODEL.exists():
-            get = "setup_env.sh --whisper light" if sys.platform == "darwin" else GET_LIGHT_MODEL
-            raise SystemExit(f"whisper.cpp has no model at {LIGHT_MODEL}: {get}")
-        # whisper.cpp reads 16 kHz mono WAV only.
-        audio = out_dir / "audio.wav"
-        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(recording), "-vn", "-ac", "1", "-ar", "16000",
-                        str(audio)], check=True)
-        try:
-            subprocess.run(["whisper-cli", "-m", str(LIGHT_MODEL), "-f", str(audio), "-l", language or "auto",
-                            "-ovtt", "-of", str(out_dir / part.stem)], check=True)
-        finally:
-            audio.unlink(missing_ok=True)
-        os.replace(part, target)
-        return target, f"made with whisper.cpp ({LIGHT_MODEL.name})"
-    raise SystemExit(_no_whisper())
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(recording), "-vn", "-ac", "1", "-ar", "16000",
+                    str(audio)], check=True)
+    try:
+        subprocess.run(["whisper-cli", "-m", str(WHISPER_MODEL), "-f", str(audio), "-l", language or "auto",
+                        "-ovtt", "-of", str(out_dir / part.stem)], check=True)
+    finally:
+        audio.unlink(missing_ok=True)
+    os.replace(part, target)
+    return target, f"made with whisper.cpp ({WHISPER_MODEL.name})"
 
 
 # ---------- images ----------
@@ -253,28 +228,17 @@ def _read_pgm(path: Path) -> bytes:
 
 # ---------- screen changes ----------
 
-def screen_changes(samples: list[list[float]], change: float = CHANGE) -> list[int]:
+def screen_changes(samples: list[list[float]]) -> list[int]:
     """Return the seconds where a new screen appears and then stays still."""
     kept: list[int] = []
     last = None
     for t, sample in enumerate(samples):
-        if last is not None and distance(sample, last) <= change:
+        if last is not None and distance(sample, last) <= CHANGE:
             continue
         ahead = samples[t + 1:t + 1 + STILL_SECONDS]
         if len(ahead) == STILL_SECONDS and all(distance(sample, s) < STILL for s in ahead):
             kept.append(t)
             last = sample
-    return kept
-
-
-def limit_changes(samples: list[list[float]], per_hour: int) -> list[int]:
-    """Return screen changes, raising the change threshold until they fit per_hour."""
-    allowed = max(MIN_CAPTURES, math.ceil(per_hour * len(samples) / 3600))
-    change = CHANGE
-    kept = screen_changes(samples, change)
-    while len(kept) > allowed:
-        change *= 1.25
-        kept = screen_changes(samples, change)
     return kept
 
 
@@ -409,7 +373,6 @@ def main() -> int:
     parser.add_argument("--slides", type=Path, help="PDF of the slides shown in the recording")
     parser.add_argument("--crop", type=crop_box, help="area of the frame that shows the slides or screen, as W:H:X:Y")
     parser.add_argument("--language", help="spoken language for Whisper, for example es or en")
-    parser.add_argument("--max-captures-per-hour", type=int, default=CAPTURES_PER_HOUR)
     parser.add_argument("--out", type=Path, help="output folder (default: <recording>.prepared next to it)")
     parser.add_argument("--retranscribe", action="store_true", help="make a new transcript even if one exists")
     parser.add_argument("--preview", action="store_true", help="save one frame to choose --crop, and stop")
@@ -450,7 +413,7 @@ def main() -> int:
             segments = slide_segments(match_slides(samples, slides))
         else:
             samples = sample_video(recording, args.crop)
-            changes = limit_changes(samples, args.max_captures_per_hour)
+            changes = screen_changes(samples)
             frames = save_frames(recording, changes, capture_times(samples, changes), out_dir)
             segments = change_segments(changes, len(samples), frames)
     if not segments:  # audio only, or a video too short to sample: keep the whole transcript

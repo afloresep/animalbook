@@ -39,10 +39,10 @@ def test_screen_change_needs_a_still_screen():
     assert pr.screen_changes(samples) == [0, 5]
 
 
-def test_default_limit_keeps_every_slide_of_a_busy_talk():
+def test_every_slide_of_a_busy_talk_is_a_change():
     # 40 slides in 30 minutes, one every 45 s, as in a typical talk.
     samples = [flat(0 if i % 2 == 0 else 90) for i in range(40) for _ in range(45)]
-    assert len(pr.limit_changes(samples, pr.CAPTURES_PER_HOUR)) == 40
+    assert len(pr.screen_changes(samples)) == 40
 
 
 def test_capture_is_the_last_still_second_of_its_stretch():
@@ -83,17 +83,17 @@ def test_crop_must_be_four_numbers():
 
 
 def _fake_tools(monkeypatch, present, out_dir):
-    """Pretend only `present` commands exist, and record the commands run. A fake
-    Whisper writes its unfinished transcript, as the real ones do."""
+    """Pretend only `present` commands exist and the Whisper model is downloaded, and
+    record the commands run. A fake whisper-cli writes its unfinished transcript,
+    appending ".vtt" to -of as the real one does."""
     run = []
+    model = out_dir / "model.bin"
+    model.write_bytes(b"")
+    monkeypatch.setattr(pr, "WHISPER_MODEL", model)
 
     def fake_run(command, **kwargs):
         run.append(command)
-        # Name the output as each real tool does: mlx-whisper swaps the suffix, whisper.cpp appends it.
-        if command[0] == "mlx_whisper":
-            name = command[command.index("--output-name") + 1]
-            (out_dir / name).with_suffix(".vtt").write_text("WEBVTT\n")
-        elif command[0] == "whisper-cli":
+        if command[0] == "whisper-cli":
             Path(command[command.index("-of") + 1] + ".vtt").write_text("WEBVTT\n")
 
     monkeypatch.setattr(pr.shutil, "which", lambda name: "/x" if name in present else None)
@@ -101,49 +101,40 @@ def _fake_tools(monkeypatch, present, out_dir):
     return run
 
 
-def test_light_whisper_runs_whisper_cpp_on_16_khz_audio(monkeypatch, tmp_path):
-    model = tmp_path / "model.bin"
-    model.write_bytes(b"")
-    monkeypatch.setattr(pr, "LIGHT_MODEL", model)
+def test_whisper_cpp_runs_on_16_khz_audio(monkeypatch, tmp_path):
     run = _fake_tools(monkeypatch, {"whisper-cli", "ffmpeg"}, tmp_path)
     _, source = pr.transcribe(tmp_path / "clase.mp4", tmp_path, None)
     assert run[0][0] == "ffmpeg" and "16000" in run[0]
-    assert run[1][:3] == ["whisper-cli", "-m", str(model)]
+    assert run[1][:3] == ["whisper-cli", "-m", str(tmp_path / "model.bin")]
     assert run[1][run[1].index("-l") + 1] == "auto"  # whisper.cpp assumes English otherwise
     assert "whisper.cpp" in source
     assert (tmp_path / "transcript.vtt").exists() and [p.name for p in tmp_path.glob("*.vtt")] == ["transcript.vtt"]
 
 
 def test_earlier_transcript_is_reused_unless_retranscribe(monkeypatch, tmp_path):
-    run = _fake_tools(monkeypatch, {"mlx_whisper"}, tmp_path)
+    run = _fake_tools(monkeypatch, {"whisper-cli", "ffmpeg"}, tmp_path)
     (tmp_path / "transcript.vtt").write_text("WEBVTT\n")
     _, source = pr.transcribe(tmp_path / "clase.mp4", tmp_path, None)
     assert run == [] and "--retranscribe" in source
     pr.transcribe(tmp_path / "clase.mp4", tmp_path, "es", retranscribe=True)
-    assert run[0][0] == "mlx_whisper"
+    assert run[1][0] == "whisper-cli"
 
 
 def test_interrupted_whisper_leaves_no_transcript(monkeypatch, tmp_path):
     def interrupted(command, **kwargs):
         raise KeyboardInterrupt
 
-    monkeypatch.setattr(pr.shutil, "which", lambda name: "/x" if name == "mlx_whisper" else None)
+    _fake_tools(monkeypatch, {"whisper-cli", "ffmpeg"}, tmp_path)
     monkeypatch.setattr(pr.subprocess, "run", interrupted)
     with pytest.raises(KeyboardInterrupt):
         pr.transcribe(tmp_path / "clase.mp4", tmp_path, None)
     assert not (tmp_path / "transcript.vtt").exists()
 
 
-def test_full_whisper_wins_when_both_are_installed(monkeypatch, tmp_path):
-    run = _fake_tools(monkeypatch, {"whisper-cli", "mlx_whisper", "ffmpeg"}, tmp_path)
-    _, source = pr.transcribe(tmp_path / "clase.mp4", tmp_path, "es")
-    assert run[0][0] == "mlx_whisper" and "mlx-whisper" in source
-
-
 def test_no_whisper_says_how_to_get_one(monkeypatch, tmp_path):
     _fake_tools(monkeypatch, {"ffmpeg"}, tmp_path)
     monkeypatch.setattr(pr.sys, "platform", "darwin")
-    with pytest.raises(SystemExit, match="setup_env.sh --whisper light"):
+    with pytest.raises(SystemExit, match="setup_env.sh --whisper"):
         pr.transcribe(tmp_path / "clase.mp4", tmp_path, None)
 
 
