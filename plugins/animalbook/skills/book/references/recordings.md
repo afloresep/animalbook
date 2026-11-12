@@ -32,7 +32,7 @@ Run `check_deps.py` and look at its two `optional` recording groups.
   export. If every recording has one, skip it. Otherwise offer the two sizes
   and let the user pick; recommend light:
   - `setup_env.sh --whisper light`: whisper.cpp with a compressed copy of the
-    Whisper large-v3-turbo model, about 0.6 GB in all. Any Mac. Accurate
+    Whisper large-v3-turbo model, about 0.6 GB plus ffmpeg. Any Mac. Accurate
     enough for classes and talks.
   - `setup_env.sh --whisper full`: mlx-whisper with the uncompressed model,
     about 3.3 GB, most of it PyTorch. Apple Silicon only. For a user who
@@ -105,8 +105,8 @@ Look at the section list of `recording.md` before writing from it:
 - **Slides out of order, or one slide for an hour.** The crop is probably
   wrong. Run `--preview` again and fix the box.
 - **Build-up slides** (one bullet more on each page) look almost the same; the
-  later page wins a tie, so a few seconds can land on the next page. That is
-  harmless for writing.
+  latest of consecutive pages that tie wins, so a few seconds can land on the
+  next page. That is harmless for writing.
 - **A warning that the transcript has no text.** The recording may have no
   speech, or Whisper failed: try `--retranscribe` with `--language`.
 - **Whisper mishears names, technical terms and numbers.** Check them against

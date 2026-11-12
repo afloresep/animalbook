@@ -92,6 +92,8 @@ fi
 # Keep everything micromamba writes, its package cache too, inside ~/.animalbook.
 export MAMBA_ROOT_PREFIX="$ENV_DIR/mamba"
 export CONDA_PKGS_DIRS="$ENV_DIR/mamba/pkgs"
+# micromamba 2 keeps its repodata index in ~/.cache/conda otherwise.
+export XDG_CACHE_HOME="$ENV_DIR/mamba/cache"
 MAMBA="$ENV_DIR/bin/micromamba"
 get_micromamba() {
   if [ ! -x "$MAMBA" ]; then

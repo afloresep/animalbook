@@ -50,12 +50,15 @@ _CROP = re.compile(r"\d+:\d+:\d+:\d+")
 
 # Samples are this small: enough to tell slides apart, cheap to compare in pure Python.
 SAMPLE_W, SAMPLE_H = 64, 36
+# Slides of one template (same title bar, same bullet layout) differ by less than the
+# noise of a video frame at 64x36; at 128x72 they are told apart.
+SLIDE_W, SLIDE_H = 128, 72
 # Distances are mean absolute differences of normalized pixels (0 = identical).
 CHANGE = 0.35  # a new screen differs from the last kept one at least this much
 STILL = 0.15  # a screen is still while it differs from itself less than this
 STILL_SECONDS = 3  # how long a new screen must stay still to count
 MATCH = 0.6  # a sample farther than this from every slide shows no slide
-TIE = 0.05  # slides this close to the best match tie; the later one wins (builds)
+TIE = 0.05  # slides this close to the best match tie; of consecutive ones the latest wins (builds)
 MIN_SEGMENT = 3  # shorter slide stretches are flicker and join the previous one
 MIN_CAPTURES = 10  # the per-hour limit never cuts a recording below this many
 # A guard for odd videos (endless scrolling), not a budget: a talk or class with a
@@ -141,10 +144,11 @@ def transcribe(recording: Path, out_dir: Path, language: str | None,
         return target, "exported with the recording"
     if target.exists() and not retranscribe:
         return target, "made with Whisper in an earlier run (--retranscribe makes a new one)"
-    part = out_dir / "transcript.part.vtt"
+    # No dot in the name: mlx-whisper replaces everything after one with ".vtt".
+    part = out_dir / "transcript-part.vtt"
     if shutil.which("mlx_whisper"):
         command = ["mlx_whisper", str(recording), "--model", WHISPER_MODEL, "--output-format", "vtt",
-                   "--output-dir", str(out_dir), "--output-name", "transcript.part"]
+                   "--output-dir", str(out_dir), "--output-name", part.stem]
         if language:
             command += ["--language", language]
         env = dict(os.environ)
@@ -163,7 +167,7 @@ def transcribe(recording: Path, out_dir: Path, language: str | None,
                         str(audio)], check=True)
         try:
             subprocess.run(["whisper-cli", "-m", str(LIGHT_MODEL), "-f", str(audio), "-l", language or "auto",
-                            "-ovtt", "-of", str(out_dir / "transcript.part")], check=True)
+                            "-ovtt", "-of", str(out_dir / part.stem)], check=True)
         finally:
             audio.unlink(missing_ok=True)
         os.replace(part, target)
@@ -208,20 +212,21 @@ def duration(recording: Path) -> float:
         return 0.0
 
 
-def sample_video(recording: Path, crop: str | None) -> list[list[float]]:
+def sample_video(recording: Path, crop: str | None, width: int = SAMPLE_W,
+                 height: int = SAMPLE_H) -> list[list[float]]:
     """Return one normalized grayscale sample per second of the recording."""
-    filters = ["fps=1"] + ([f"crop={crop}"] if crop else []) + [f"scale={SAMPLE_W}:{SAMPLE_H}", "format=gray"]
+    filters = ["fps=1"] + ([f"crop={crop}"] if crop else []) + [f"scale={width}:{height}", "format=gray"]
     raw = subprocess.run(["ffmpeg", "-v", "error", "-i", str(recording), "-map", "0:V:0", "-vf", ",".join(filters),
                           "-f", "rawvideo", "-"], capture_output=True, check=True).stdout
-    size = SAMPLE_W * SAMPLE_H
+    size = width * height
     return [normalize(raw[i:i + size]) for i in range(0, len(raw) - size + 1, size)]
 
 
-def sample_slides(pdf: Path, work: Path) -> list[list[float]]:
+def sample_slides(pdf: Path, work: Path, width: int = SLIDE_W, height: int = SLIDE_H) -> list[list[float]]:
     """Return one normalized grayscale sample per page of a PDF."""
     shutil.rmtree(work, ignore_errors=True)  # pages of an earlier, different PDF
     work.mkdir(parents=True)
-    subprocess.run(["pdftoppm", "-gray", "-scale-to-x", str(SAMPLE_W), "-scale-to-y", str(SAMPLE_H),
+    subprocess.run(["pdftoppm", "-gray", "-scale-to-x", str(width), "-scale-to-y", str(height),
                     str(pdf), str(work / "page")], check=True)
     return [normalize(_read_pgm(page)) for page in sorted(work.glob("page*.pgm"))]
 
@@ -282,8 +287,13 @@ def match_slides(samples: list[list[float]], slides: list[list[float]]) -> list[
         if best > MATCH:
             matches.append(None)
             continue
-        # Build-up slides differ by one bullet: prefer the latest page that ties.
-        matches.append(max(i for i, d in enumerate(distances) if d <= best + TIE) + 1)
+        # Build-up slides are consecutive pages that differ by one bullet: of the pages
+        # that tie in a row from the best one, the latest wins. A page further on that
+        # only shares the template (same title bar, same bullets layout) does not.
+        page = distances.index(best)
+        while page + 1 < len(distances) and distances[page + 1] <= best + TIE:
+            page += 1
+        matches.append(page + 1)
     return matches
 
 
@@ -434,11 +444,12 @@ def main() -> int:
     length = int(cues[-1].end) + 1 if cues else 0
     segments: list[Segment] = []
     if video:
-        samples = sample_video(recording, args.crop)
         if args.slides:
+            samples = sample_video(recording, args.crop, SLIDE_W, SLIDE_H)
             slides = sample_slides(args.slides, out_dir / "slide-samples")
             segments = slide_segments(match_slides(samples, slides))
         else:
+            samples = sample_video(recording, args.crop)
             changes = limit_changes(samples, args.max_captures_per_hour)
             frames = save_frames(recording, changes, capture_times(samples, changes), out_dir)
             segments = change_segments(changes, len(samples), frames)

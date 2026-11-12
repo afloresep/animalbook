@@ -3,6 +3,7 @@
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 import prepare_recording as pr
 import pytest
@@ -61,6 +62,12 @@ def test_slide_matching_prefers_later_tie_and_folds_flicker():
     assert [(s.slide, s.start, s.end) for s in segments] == [(2, 0, 9), (3, 9, 15)]
 
 
+def test_slide_matching_tie_does_not_jump_over_other_slides():
+    # Pages 1 and 3 share the deck's template and nearly tie; page 2 between them does not.
+    slides = [flat(0), flat(120), flat(0, noise=8)]
+    assert pr.match_slides([flat(0)], slides) == [1]
+
+
 def test_markdown_puts_each_cue_under_its_segment():
     cues = [pr.Cue(1, 2, "uno"), pr.Cue(7, 8, "dos")]
     segments = [pr.Segment(0, 5, slide=1), pr.Segment(5, 10, slide=2)]
@@ -82,8 +89,12 @@ def _fake_tools(monkeypatch, present, out_dir):
 
     def fake_run(command, **kwargs):
         run.append(command)
-        if command[0] in ("mlx_whisper", "whisper-cli"):
-            (out_dir / "transcript.part.vtt").write_text("WEBVTT\n")
+        # Name the output as each real tool does: mlx-whisper swaps the suffix, whisper.cpp appends it.
+        if command[0] == "mlx_whisper":
+            name = command[command.index("--output-name") + 1]
+            (out_dir / name).with_suffix(".vtt").write_text("WEBVTT\n")
+        elif command[0] == "whisper-cli":
+            Path(command[command.index("-of") + 1] + ".vtt").write_text("WEBVTT\n")
 
     monkeypatch.setattr(pr.shutil, "which", lambda name: "/x" if name in present else None)
     monkeypatch.setattr(pr.subprocess, "run", fake_run)
@@ -100,7 +111,7 @@ def test_light_whisper_runs_whisper_cpp_on_16_khz_audio(monkeypatch, tmp_path):
     assert run[1][:3] == ["whisper-cli", "-m", str(model)]
     assert run[1][run[1].index("-l") + 1] == "auto"  # whisper.cpp assumes English otherwise
     assert "whisper.cpp" in source
-    assert (tmp_path / "transcript.vtt").exists() and not (tmp_path / "transcript.part.vtt").exists()
+    assert (tmp_path / "transcript.vtt").exists() and [p.name for p in tmp_path.glob("*.vtt")] == ["transcript.vtt"]
 
 
 def test_earlier_transcript_is_reused_unless_retranscribe(monkeypatch, tmp_path):
