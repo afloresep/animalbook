@@ -1,5 +1,7 @@
 """Shared test helpers for the book skill."""
 
+from __future__ import annotations
+
 import copy
 import dataclasses
 import shutil

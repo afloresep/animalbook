@@ -15,7 +15,7 @@ from pathlib import Path
 
 import book_settings
 from book_settings import BookSettings
-from check_deps import CHROMIUM_NAMES, MAC_CHROME
+from check_deps import CHROMIUM_NAMES, find_mac_chrome
 
 SKILL_DIR = Path(__file__).resolve().parents[1]
 TEMPLATE = SKILL_DIR / "cover" / "cover.html"
@@ -184,8 +184,9 @@ def find_chromium() -> str:
         path = shutil.which(name)
         if path:
             return path
-    if MAC_CHROME.exists():
-        return str(MAC_CHROME)
+    chrome = find_mac_chrome()
+    if chrome is not None:
+        return str(chrome)
     raise FileNotFoundError("Chromium or Chrome is needed for the cover; run check_deps.py")
 
 

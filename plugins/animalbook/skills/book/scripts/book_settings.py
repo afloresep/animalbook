@@ -5,6 +5,8 @@ book's look and progress: title, fonts, callout style, cover, where meeting
 history goes, which parts are written, and the last build.
 """
 
+from __future__ import annotations
+
 import json
 import re
 from dataclasses import asdict, dataclass, field, fields
@@ -17,6 +19,9 @@ SANS = ("IBM Plex Sans Condensed", "Fira Sans Condensed")
 MONO = "IBM Plex Mono"
 HISTORY = ("appendix", "callouts", "both", "none")
 PART_STATUS = ("planned", "written")
+# A recording is content (a class or talk the book teaches from: it may give
+# definitions and numbers) or context (meetings that explain decisions: never numbers).
+RECORDING_ROLES = ("content", "context")
 HEX_COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 # family -> style -> file name in assets/fonts/. Sans families add "semibold" for
@@ -105,6 +110,9 @@ class BookSettings:
         history: Where meeting history goes, one of HISTORY.
         parts: Planned parts, each {"title": ..., "status": "planned" | "written"}.
         last_build: {"date": ..., "commit": ...} of the last build, or None.
+        recordings: Groups of recordings and their role, each
+            {"path": <file or folder>, "role": "content" | "context"}. Empty
+            when the book uses no recordings.
     """
 
     title: str
@@ -118,6 +126,7 @@ class BookSettings:
     history: str
     parts: list[dict[str, str]] = field(default_factory=list)
     last_build: dict[str, str] | None = None
+    recordings: list[dict[str, str]] = field(default_factory=list)
 
 
 def _require(data: dict, key: str, where: str = "") -> object:
@@ -173,6 +182,12 @@ def from_dict(data: dict) -> BookSettings:
         if not isinstance(part, dict) or "title" not in part:
             raise SettingsError(f'parts[{index}]: expected {{"title": ..., "status": ...}}')
         _choice(part.get("status"), PART_STATUS, f"parts[{index}].status")
+    recordings = list(data.get("recordings", []))
+    for index, group in enumerate(recordings):
+        if not isinstance(group, dict) or not group.get("path"):
+            raise SettingsError(f'recordings[{index}]: expected {{"path": ..., "role": "content" | "context"}}')
+        _reject_unknown(group, ("path", "role"), f"recordings[{index}].")
+        _choice(group.get("role"), RECORDING_ROLES, f"recordings[{index}].role")
     return BookSettings(
         title=str(_require(data, "title")),
         subtitle=str(data.get("subtitle", "")),
@@ -185,6 +200,7 @@ def from_dict(data: dict) -> BookSettings:
         history=_choice(data.get("history", "none"), HISTORY, "history"),
         parts=parts,
         last_build=data.get("last_build"),
+        recordings=recordings,
     )
 
 

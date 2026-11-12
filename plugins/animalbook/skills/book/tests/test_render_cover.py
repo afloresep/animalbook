@@ -48,8 +48,9 @@ def test_title_is_escaped(book_dir):
 
 def _darkest(png: Path, crop: str) -> float:
     """Return the darkest intensity (0 black, 1 white) in a crop of a PNG."""
-    out = subprocess.run(["convert", str(png), "-crop", crop, "+repage", "-format",
-                          "%[fx:minima.intensity]", "info:"], capture_output=True, text=True, check=True)
+    # ImageMagick 7 rejects `minima.intensity`; on a gray image `minima` is the same value.
+    out = subprocess.run(["convert", str(png), "-crop", crop, "+repage", "-colorspace", "Gray",
+                          "-format", "%[fx:minima]", "info:"], capture_output=True, text=True, check=True)
     return float(out.stdout)
 
 

@@ -11,8 +11,9 @@ serif text with condensed sans headings, and colored callouts that say what to
 remember and what to be careful about. The book is written from the project's own
 sources and grows with it.
 
-`<skill>` below means the folder this file is in. Scripts are stdlib Python:
-run them with `python3`. A book lives in its own folder inside the project
+`<skill>` below means the folder this file is in. Scripts are stdlib Python
+(3.9 or newer, so the `python3` macOS ships works): run them with `python3`.
+A book lives in its own folder inside the project
 (for example `docs/book/`), holding `book.tex`, `book.json`, `chapters/`,
 `figures/`, `cover/` and `style/`.
 
@@ -24,11 +25,39 @@ The work goes in this order. Each step says when to stop for the user.
 python3 <skill>/scripts/check_deps.py
 ```
 
-If it prints `missing` lines (exit code 1), show the user each one with its
-install command and stop until they say it is done. Lines marked `optional`
-(Codex, used only for generated cover animals) do not stop the run: mention them
-and go on. Never install anything yourself and never fall back to a simpler
-layout.
+It prints an install plan: the fewest commands, in the order to run them, each
+with what it installs. When it starts with `missing` (exit code 1), show the
+user those commands as they are and stop until they say it is done, then run
+the check again. The `optional` groups do not stop the run: mention them in one
+line each and go on. Codex is only for generated cover animals; the recording
+tools matter only if the book will use recordings (see step 4). Never install
+anything yourself and never fall back to a simpler layout.
+
+When it starts with `note: ... is not on PATH` (a shell started before the
+setup), start every command of this skill with the `export PATH=...` it prints.
+
+### On macOS: setup_env.sh
+
+On macOS, LaTeX comes from TinyTeX, a small TeX distribution that installs in
+the home folder with no admin rights (a few hundred MB, where MacTeX is about
+6 GB). `check_deps.py` points to one script for it, which the user runs:
+
+```bash
+bash <skill>/scripts/setup_env.sh
+```
+
+It installs into `~/.animalbook` only what the Mac lacks: TinyTeX with the
+template's LaTeX packages, and Poppler and ImageMagick when Homebrew did not
+provide them. It adds one line to `~/.zshrc` that puts `~/.animalbook/bin` on
+`PATH`, is safe to run again (for example after a failed download) and ends by
+running `check_deps.py`. Options for recordings are in
+[references/recordings.md](references/recordings.md); offer them only once the
+user says the book will use recordings.
+
+When the user asks how to remove it all, give them
+`bash <skill>/scripts/remove_env.sh`. It deletes `~/.animalbook` (the Whisper
+models too) and its line in `~/.zshrc`. Books already written stay where they
+are, but cannot be built again until the setup runs again.
 
 ## 1. Plan a new book
 
@@ -72,6 +101,10 @@ book's. Show it to the user.
 Follow [references/writing.md](references/writing.md), section "Sources". Ask
 which sources exist, read them, and for the part you are about to write list
 the sources per chapter. Do not write before this list exists.
+
+Video or audio recordings (classes, talks, meetings, demos) are read through a
+transcript split by slide or screen: follow
+[references/recordings.md](references/recordings.md).
 
 ## 5. Write one part, build it, stop
 
