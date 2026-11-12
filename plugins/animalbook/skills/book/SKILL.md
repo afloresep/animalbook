@@ -61,12 +61,11 @@ are, but cannot be built again until the setup runs again.
 
 ## 1. Plan a new book
 
-Follow [references/planning.md](references/planning.md): one round of
-questions, each with your proposed answer, covering the reader, what the book
-should let them do, how long it should be, the parts and chapters with a page
-budget each, where meeting history goes, and the look. Write the answers to
-`book.json` and show the user the plan as a short table of parts and chapters
-with their page budgets. Stop until they agree.
+Follow [references/planning.md](references/planning.md): two short rounds of
+multiple-choice questions (the reader, the purpose, the length, then the look),
+each with your proposed answer first. Then show the plan, an outline of parts,
+chapters and page budgets, inside the question that confirms it, and stop until
+the user agrees. Write the answers to `book.json`.
 
 An existing book in another layout (a LaTeX book written before this skill) is
 brought in with the same interview; see "Bring in an existing LaTeX book" in
@@ -87,15 +86,15 @@ starts from `<skill>/tex/book-template.tex`, copied to `<book_dir>/book.tex`.
 
 Pick and clean the animal picture with
 [references/engravings.md](references/engravings.md): a real engraving from
-Wikimedia Commons first, a Codex engraving when nothing clean is found. Show the
-user the picture and stop until they accept it. Then:
+Wikimedia Commons first, a Codex engraving when nothing clean is found. Open the
+picture for the user (see "Always") and stop until they accept it. Then:
 
 ```bash
 python3 <skill>/scripts/render_cover.py <book_dir>
 ```
 
 Look at `cover/cover.png`: the title fits, nothing overlaps, the fonts are the
-book's. Show it to the user.
+book's. Then open it for the user and ask whether they accept it.
 
 ## 4. Gather sources
 
@@ -138,9 +137,9 @@ python3 <skill>/scripts/book_length.py <book_dir>
 It prints each part's pages against its budget. When it exits 1, a part or
 the whole book is more than 15% over: cut as "Length" in
 [references/writing.md](references/writing.md) says, rebuild, and check again.
-Then mark the part `written` in `book.json`, show the user a few page images
-and its pages against the budget, and stop for their check before the next
-part.
+Then mark the part `written` in `book.json`, open a few of its pages for the
+user (one image, the pages side by side), give its pages against the budget,
+and stop for their check before the next part.
 
 ## 6. Update an existing book
 
@@ -156,6 +155,16 @@ out or moved to an appendix to stay within budget. Keep it to a few lines.
 
 ## Always
 
+- To show the user a picture (the animal, the cover, pages), open it in their
+  viewer before you ask about it: `open <file>` on macOS, `xdg-open <file>` on
+  Linux. A path or a description in the terminal is not showing it. Put
+  several pictures side by side in one image first
+  (`convert a.png b.png c.png +append choices.png`), and name each one in the
+  question ("left", "middle", "right"). When the viewer does not open, give
+  the path.
+- Ask the user with the multiple-choice question tool when there is one
+  (`AskUserQuestion` in Claude Code), your proposed answer first. Keep what
+  you show short: the user should pick, not read.
 - Never commit, push or publish. Never edit a file outside the book folder
   without asking.
 - A book that is not under git (for example a gitignored folder) cannot be
