@@ -2,8 +2,8 @@
 
 Every book gets one animal on its cover, as an engraving: black ink line work
 on white. Look for a real engraving first. Generate one with Codex only when
-the search finds nothing clean. Show the user every picture before it goes on
-a cover.
+the search finds nothing clean. Open every picture for the user before it
+goes on a cover (SKILL.md, "Always").
 
 ## 1. Pick the animal
 
@@ -42,7 +42,8 @@ Look at every downloaded thumbnail. Accept an image only if all of these hold:
 - Little scenery. A full landscape does not work on a cover.
 - Nothing cut off: the whole animal is in the picture.
 
-Show the accepted ones (at most three) to the user and let them choose.
+Put the accepted ones (at most three) side by side in one image, open it for
+the user, and let them choose: left, middle or right.
 
 ## 4. Clean the chosen image
 

@@ -11,7 +11,10 @@ front when `check_deps.py` said the environment is not on `PATH`.
 
 ## 1. Gather what exists for each recording
 
-Ask the user, per recording or group of them, before installing anything:
+Ask the user, per recording or group of them, before installing anything,
+with the multiple-choice question tool when there is one (for example
+"Slides as PDF?" with `Yes, in sources/` and `No slides`). Skip what the
+files already answer, such as a PDF with the same name as the video:
 
 - **A transcript export.** Teams and Zoom can export a `.vtt` with timestamps
   and speaker names. Save it next to the recording with the same name
