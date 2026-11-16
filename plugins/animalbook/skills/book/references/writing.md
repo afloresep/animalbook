@@ -65,6 +65,12 @@ user what moved.
   Whisper mishears numbers as easily as names. Keep a list of
   claim -> source path while writing.
 - **Papers** are cited with their arXiv number or address and a section or page.
+- **What you know but the sources do not say** (a fact from a well-known paper,
+  a quote, a detail of a published model) may go in when it helps the reader.
+  Cite the paper, and name it in `\sources{}` as coming from outside the
+  sources, for example "GPT-3's layer count is from the GPT-3 paper". It never
+  gives a number about the project itself, and never overrides a source. When
+  you are not sure of it, leave it out.
 - **Results carry an evidence tag**: `\ev{finding}` says something about the
   question the project studies; `\ev{method check}` shows a tool works;
   `\ev{negative}` means the tested effect was not shown (say whether the test
